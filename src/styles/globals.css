@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white text-brand-black font-sans;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+    line-height: 1.2;
+  }
+
+  a {
+    @apply transition-colors duration-100;
+  }
+
+  input, textarea, select {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  .container-site {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply bg-brand-black text-white font-semibold px-6 py-3
+           transition-all duration-200 hover:bg-brand-gray-800
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply border border-brand-black text-brand-black font-semibold px-6 py-3
+           transition-all duration-200 hover:bg-brand-black hover:text-white
+           active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply text-brand-black font-medium px-4 py-2
+           transition-colors duration-200 hover:bg-brand-gray-100;
+  }
+
+  .input-field {
+    @apply w-full border border-brand-gray-300 px-4 py-3 text-sm
+           focus:border-brand-black focus:shadow-md focus:ring-1 focus:ring-brand-gray-200
+           transition-all duration-150 placeholder:text-brand-gray-400 bg-white;
+  }
+
+  .select-field {
+    @apply w-full border border-brand-gray-300 px-4 py-3 text-sm
+           focus:border-brand-black focus:shadow-md focus:ring-1 focus:ring-brand-gray-200
+           transition-all duration-150 bg-white appearance-none cursor-pointer;
+  }
+
+  .label-field {
+    @apply block text-sm font-medium text-brand-gray-700 mb-1.5;
+  }
+
+  .section-title {
+    @apply text-3xl sm:text-4xl font-bold text-brand-black tracking-tight;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-xl;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .divider {
+    @apply border-t border-brand-gray-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Belt color gradient for red-black belt */
+.belt-gradient-red-black {
+  background: linear-gradient(to right, #DC2626 50%, #171717 50%);
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes floatY {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: floatY 4s ease-in-out infinite;
+}

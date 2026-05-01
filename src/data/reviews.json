@@ -1,0 +1,44 @@
+{
+  "reviews": [
+    {
+      "id": 1,
+      "name": "Carlos Santos",
+      "title": "Faixa Azul",
+      "rating": 5,
+      "text": "Qualidade impecável! A faixa chegou rápido e o bordado ficou perfeito. Recomendo muito!",
+      "date": "2024-03-15"
+    },
+    {
+      "id": 2,
+      "name": "Marina Costa",
+      "title": "Patch Personalizado",
+      "rating": 5,
+      "text": "Superou minhas expectativas. O detalhe do bordado é profissional, exatamente o que eu queria.",
+      "date": "2024-03-10"
+    },
+    {
+      "id": 3,
+      "name": "Rafael Oliveira",
+      "title": "Faixa Preta",
+      "rating": 5,
+      "text": "Depois de 15 anos de treino, essa é a melhor faixa que já tive. Parabéns OssPatches!",
+      "date": "2024-03-05"
+    },
+    {
+      "id": 4,
+      "name": "Ana Paula",
+      "title": "Faixa Infantil + Patch",
+      "rating": 5,
+      "text": "Meu filho amou! A qualidade é garantida e chegou dentro do prazo. Muito bom!",
+      "date": "2024-02-28"
+    },
+    {
+      "id": 5,
+      "name": "João Pedro",
+      "title": "Kit com 3 Patches",
+      "rating": 5,
+      "text": "Experiência excelente desde o pedido até a entrega. Produto de qualidade premium.",
+      "date": "2024-02-20"
+    }
+  ]
+}

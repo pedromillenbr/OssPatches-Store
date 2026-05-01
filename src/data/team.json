@@ -1,0 +1,85 @@
+{
+  "athletes": [
+    {
+      "id": "athlete-1",
+      "name": "Gabriel Grijó",
+      "title": "Campeão e Vice-Campeão BJJ PRO 2023/2024 ",
+      "category": "Peso Leve",
+      "image": "/images/athletes/gabriel_grijo.png",
+      "bio": "Gabriel é um dos atletas mais promissores do cenário do Jiu-Jitsu, conhecido por sua técnica refinada e espírito competitivo. Ele é faixa preta e tem uma carreira repleta de conquistas em competições nacionais e internacionais.",
+      "achievements": [
+        "Vice-Campeão Europeu 2020/2024 IBJJF",
+        "Terceiro colocado AJP Grand Slam Brasil 2025",
+        "Vice-Campeão Brasileiro 2018 e terceiro colocado 2024 CBJJ"
+      ]
+    },
+    {
+      "id": "athlete-2",
+      "name": "Sirley Baião",
+      "title": "3x Campeã Mundial IBJJF",
+      "category": "Peso Pesado",
+      "image": "/images/athletes/sirley_baiao.jpeg",
+      "bio": "Atleta brasileira de Jiu-Jitsu e faixa Preta 1° grau, Sirley é uma das atletas master mais reconhecidas no esporte internacionalmente. Sua presença nos tatames reflete excelência esportiva, longevidade e autoridade dentro da modalidade.",
+      "achievements": [
+        "Campeã Brasileira 2024 CBJJ",
+        "2° Lugar Ranking Mundial IBJJF 2024",
+        "10x Open IBJJF "
+      ]
+    },
+    
+    {
+      "id": "athlete-4",
+      "name": "Gelson Ricken",
+      "title": "9º lugar no ranking mundial Judô",
+      "category": "Peso Médio",
+      "image": "/images/athletes/gelson_ricken.jpeg",
+      "bio": "Gelson é um dos jovens talentos mais destacados do judô brasileiro, conhecido por seu desempenho consistente em competições nacionais e internacionais. Sua performance em competições revela um atleta com sólida base, capaz de impor seu ritmo e explorar desequilíbrios do adversário com eficiência, utilizando-se da grande força física.",
+      "achievements": [
+        "Campeão pan-americano",
+        "Campeão SuperEstadual",
+        "2x campeão brasileiro regional"
+      ]
+    },
+
+{
+      "id": "athlete-3",
+      "name": "Jasmine Ferrari",
+      "title": "2x Campeã Brasileira CBJJ",
+      "category": "Peso Meio Pesado",
+      "image": "/images/athletes/jasmine_ferrari.jpeg",
+      "bio": "Jasmine é uma atleta multicampeã do Jiu-Jistu, marcando não apenas presença no tatame mas também nas redes sociais, aonde divulga o esporte e inspira uma nova geração de atletas femininas.",
+      "achievements": [
+        "Vice-Campeã Brasileira No-Gi",
+        "2x Vice-Campeã Sul-Americana CBJJ",
+        "+ de 10 Opens IBJJF"
+      ]
+    },
+
+    {
+      "id": "athlete-5",
+      "name": "Lucas Oliveira",
+      "title": "Campeão Europeu",
+      "category": "Médio",
+      "image": "/images/athletes/lucas-oliveira.jpg",
+      "bio": "Lucas traz inovação ao Jiu-Jitsu, com um estilo dinâmico centrado em tecnologia moderna e análise detalhada de posições.",
+      "achievements": [
+        "Campeão Europeu Open",
+        "5x Campeão Brasileiro",
+        "Inventor de técnicas reconhecidas"
+      ]
+    },
+    {
+      "id": "athlete-6",
+      "name": "Beatriz Lima",
+      "title": "Mestre de Seminários",
+      "category": "Todas as categorias",
+      "image": "/images/athletes/beatriz-lima.jpg",
+      "bio": "Beatriz é uma lenda viva do Jiu-Jitsu brasileiro, responsável por ensinar toda uma geração de atletas de elite.",
+      "achievements": [
+        "Grã-Mestra 9º Grau",
+        "Mais de 40 anos ensinando",
+        "Centenas de alunos em competições internacionais"
+      ]
+    }
+  ]
+}

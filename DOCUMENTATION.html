@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OssPatches - Tabela de Referência</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #0a0a0a;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .section-title {
+            background: #0a0a0a;
+            color: white;
+            padding: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .price {
+            font-weight: bold;
+            color: #0a0a0a;
+        }
+
+        .category {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .category.adult {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .category.kids {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .category.patch {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .info-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #0a0a0a;
+        }
+
+        .info-card strong {
+            color: #0a0a0a;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stripe-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .stripe-option {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            background: #e0e0e0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .prices-summary {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0a0a0a;
+        }
+
+        .prices-summary h3 {
+            margin-bottom: 10px;
+            color: #0a0a0a;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .price-item:last-child {
+            border-bottom: none;
+        }
+
+        .patch-format {
+            display: inline-block;
+            padding: 6px 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥋 OssPatches</h1>
+        <p class="subtitle">Tabela de Referência de Produtos</p>
+
+        <!-- Pricing Summary -->
+        <div class="prices-summary">
+            <h3>💰 Tabela de Preços Atual</h3>
+            <div class="price-item">
+                <span><strong>Faixas (Padrão):</strong></span>
+                <span class="price">R$ 40,00</span>
+            </div>
+            <div class="price-item">
+                <span><strong>Faixas (Personalizada):</strong></span>
+                <span class="price">R$ 80,00</span>
+            </div>
+            <div class="price-item">
+                <span><strong>Patches:</strong></span>
+                <span class="price">R$ 40,00  (por unidade)</span>
+            </div>
+        </div>
+
+        <!-- FAIXAS ADULTAS -->
+        <div class="section">
+            <div class="section-title">👨 Faixas Adultas (Sequência IBJJF)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Slug</th>
+                        <th>Cor</th>
+                        <th>Preço Base</th>
+                        <th>Preço Custom</th>
+                        <th>Tamanhos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>faixa-branca-adulto</td>
+                        <td>Branca</td>
+                        <td>faixa-branca-adulto</td>
+                        <td><span class="color-swatch" style="background: #F5F5F5; border: 2px solid #999;"></span> Branca</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                        <td>A0, A1, A2, A3, A4</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-azul-adulto</td>
+                        <td>Azul</td>
+                        <td>faixa-azul-adulto</td>
+                        <td><span class="color-swatch" style="background: #1E40AF;"></span> Azul</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                        <td>A0, A1, A2, A3, A4</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-roxa-adulto</td>
+                        <td>Roxa</td>
+                        <td>faixa-roxa-adulto</td>
+                        <td><span class="color-swatch" style="background: #7C3AED;"></span> Roxa</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                        <td>A0, A1, A2, A3, A4</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-marrom-adulto</td>
+                        <td>Marrom</td>
+                        <td>faixa-marrom-adulto</td>
+                        <td><span class="color-swatch" style="background: #78350F;"></span> Marrom</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                        <td>A0, A1, A2, A3, A4</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-preta-adulto</td>
+                        <td>Preta</td>
+                        <td>faixa-preta-adulto</td>
+                        <td><span class="color-swatch" style="background: #171717;"></span> Preta</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                        <td>A0, A1, A2, A3, A4</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- FAIXAS INFANTIS -->
+        <div class="section">
+            <div class="section-title">👧 Faixas Infantis (Sequência IBJJF)</div>
+            <div class="info-grid" style="background: #fafafa; padding: 20px;">
+                <div class="info-card">
+                    <strong>⚙️ Opções de Listra para Faixas Infantis:</strong>
+                    <div class="stripe-options">
+                        <span class="stripe-option">Sem listra</span>
+                        <span class="stripe-option">Listra branca</span>
+                        <span class="stripe-option">Listra preta</span>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <strong>📏 Tamanhos Infantis:</strong>
+                    M0 (menor) → M4 (maior)
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Slug</th>
+                        <th>Cor</th>
+                        <th>Preço Base</th>
+                        <th>Preço Custom</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>faixa-branca-infantil</td>
+                        <td>Branca Infantil</td>
+                        <td>faixa-branca-infantil</td>
+                        <td><span class="color-swatch" style="background: #F5F5F5; border: 2px solid #999;"></span> Branca</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-cinza-infantil</td>
+                        <td>Cinza Infantil</td>
+                        <td>faixa-cinza-infantil</td>
+                        <td><span class="color-swatch" style="background: #6B7280;"></span> Cinza</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-amarela-infantil</td>
+                        <td>Amarela Infantil</td>
+                        <td>faixa-amarela-infantil</td>
+                        <td><span class="color-swatch" style="background: #fde400;"></span> Amarela</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-laranja-infantil</td>
+                        <td>Laranja Infantil</td>
+                        <td>faixa-laranja-infantil</td>
+                        <td><span class="color-swatch" style="background: #EA580C;"></span> Laranja</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                    </tr>
+                    <tr>
+                        <td>faixa-verde-infantil</td>
+                        <td>Verde Infantil</td>
+                        <td>faixa-verde-infantil</td>
+                        <td><span class="color-swatch" style="background: #15803D;"></span> Verde</td>
+                        <td class="price">R$ 40,00</td>
+                        <td class="price">R$ 80,00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PATCHES -->
+        <div class="section">
+            <div class="section-title">🎀 Patches (3 Tamanhos)</div>
+            <div class="info-grid" style="background: #fafafa; padding: 20px;">
+                <div class="info-card">
+                    <strong>📐 Tamanhos Disponíveis:</strong>
+                    <ul>
+                        <li><strong>Pequeno (P):</strong> até 7cm</li>
+                        <li><strong>Médio (M):</strong> 7-15cm</li>
+                        <li><strong>Grande (G):</strong> acima de 15cm</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <strong>🔷 Formatos Disponíveis:</strong>
+                    <div>
+                        <span class="patch-format">◻ Quadrado</span>
+                        <span class="patch-format">▭ Retângulo</span>
+                        <span class="patch-format">△ Triângulo</span>
+                        <span class="patch-format">● Círculo</span>
+                        <span class="patch-format">⬡ Hexagonal</span>
+                        <span class="patch-format">◈ Octogonal</span>
+                    </div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Slug</th>
+                        <th>Intervalo de Tamanho</th>
+                        <th>Preço</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>patch-pequeno</td>
+                        <td>Patch Pequeno (até 7cm)</td>
+                        <td>patch-pequeno</td>
+                        <td>Até 7cm</td>
+                        <td class="price">R$ 40,00</td>
+                    </tr>
+                    <tr>
+                        <td>patch-medio</td>
+                        <td>Patch Médio (7cm até 15cm)</td>
+                        <td>patch-medio</td>
+                        <td>7cm - 15cm</td>
+                        <td class="price">R$ 40,00</td>
+                    </tr>
+                    <tr>
+                        <td>patch-grande</td>
+                        <td>Patch Grande (acima de 15cm)</td>
+                        <td>patch-grande</td>
+                        <td>Acima de 15cm</td>
+                        <td class="price">R$ 40,00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- INFORMAÇÕES TÉCNICAS -->
+        <div class="section">
+            <div class="section-title">⚙️ Informações Técnicas</div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <strong>📊 Contagem de Produtos:</strong>
+                    <p>Faixas Adultas: 5</p>
+                    <p>Faixas Infantis: 5</p>
+                    <p>Patches: 3 tamanhos</p>
+                    <p><strong>Total: 13 produtos</strong></p>
+                </div>
+                <div class="info-card">
+                    <strong>🛠️ Como usar o config_manager.py:</strong>
+                    <code style="display: block; background: #f5f5f5; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                        python config_manager.py list-belts<br>
+                        python config_manager.py list-patches<br>
+                        python config_manager.py update-belt-prices 40 80<br>
+                        python config_manager.py update-patch-prices 40<br>
+                        python config_manager.py export-prices pricing.txt
+                    </code>
+                </div>
+                <div class="info-card">
+                    <strong>📁 Arquivo de Dados:</strong>
+                    <code style="display: block; background: #f5f5f5; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                        src/data/products.json
+                    </code>
+                </div>
+                <div class="info-card">
+                    <strong>🎚️ Configurações Globais:</strong>
+                    <code style="display: block; background: #f5f5f5; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                        src/config/index.ts
+                    </code>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="section">
+            <div class="section-title">📝 Notas Importantes</div>
+            <div style="padding: 20px;">
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>✅ Animação de faixas flutuantes no Hero com loop contínuo</li>
+                    <li>✅ Faixas infantis com opção de listra (branca, preta ou nenhuma)</li>
+                    <li>✅ Patches com 3 tamanhos distintos (P, M, G)</li>
+                    <li>✅ 6 formatos de patch: quadrado, retângulo, triângulo, círculo, hexagonal e octogonal</li>
+                    <li>✅ Dimensões customizáveis (altura, largura, circunferência)</li>
+                    <li>✅ Preços unificados: R$ 40 faixas padrão, R$ 80 personalizada, R$ 40 patches</li>
+                    <li>✅ Estatísticas atualizadas no Hero: "faixas que não desbotam" e "patches que não desfiam"</li>
+                    <li>✅ Use o script Python para gerenciar preços e dados facilmente</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>OssPatches © 2026 - Sistema de E-commerce de Faixas e Patches de Jiu-Jitsu</p>
+            <p>Última atualização: 2026-04-09</p>
+        </div>
+    </div>
+</body>
+</html>
