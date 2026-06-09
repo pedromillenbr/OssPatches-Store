@@ -14,6 +14,9 @@ interface CheckoutState {
   selectedShipping: ShippingOption | null;
   payment: OrderPayment | null;
   orderId: string | null;
+  pixQrCode: string | null;
+  pixCode: string | null;
+  mpPaymentId: string | null;
 
   setStep: (step: CheckoutStep) => void;
   setCustomer: (customer: CustomerIdentification) => void;
@@ -21,6 +24,8 @@ interface CheckoutState {
   setShipping: (shipping: ShippingOption | null) => void;
   setPayment: (payment: OrderPayment) => void;
   setOrderId: (id: string) => void;
+  setPixData: (qrCode: string, code: string, mpPaymentId: string) => void;
+  clearPixData: () => void;
   reset: () => void;
 }
 
@@ -31,6 +36,9 @@ const initialState = {
   selectedShipping: null,
   payment: null,
   orderId: null,
+  pixQrCode: null,
+  pixCode: null,
+  mpPaymentId: null,
 };
 
 export const useCheckoutStore = create<CheckoutState>()((set) => ({
@@ -42,5 +50,7 @@ export const useCheckoutStore = create<CheckoutState>()((set) => ({
   setShipping: (selectedShipping) => set({ selectedShipping }),
   setPayment: (payment) => set({ payment }),
   setOrderId: (orderId) => set({ orderId }),
+  setPixData: (pixQrCode, pixCode, mpPaymentId) => set({ pixQrCode, pixCode, mpPaymentId }),
+  clearPixData: () => set({ pixQrCode: null, pixCode: null, mpPaymentId: null }),
   reset: () => set(initialState),
 }));

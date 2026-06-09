@@ -15,16 +15,11 @@ export async function quoteBrazilianShipping(
   destinationCEP: string,
   items: { weight: number; width: number; height: number; length: number; quantity: number }[]
 ): Promise<ShippingOption[]> {
-  try {
-    const response = await axios.post<ShippingOption[]>('/api/shipping/quote', {
-      destination: destinationCEP,
-      items,
-    });
-    return response.data;
-  } catch {
-    // Fallback mock for development
-    return getMockBrazilianShipping();
-  }
+  const response = await axios.post<ShippingOption[]>('/api/shipping/quote', {
+    destination: destinationCEP,
+    items,
+  });
+  return response.data;
 }
 
 export function getInternationalShippingOptions(): ShippingOption[] {
@@ -48,31 +43,6 @@ export function getInternationalShippingOptions(): ShippingOption[] {
   ];
 }
 
-function getMockBrazilianShipping(): ShippingOption[] {
-  return [
-    {
-      id: 'pac',
-      name: 'PAC',
-      company: 'Correios',
-      price: 18.9,
-      days: '5–8 dias úteis',
-    },
-    {
-      id: 'sedex',
-      name: 'SEDEX',
-      company: 'Correios',
-      price: 29.9,
-      days: '1–3 dias úteis',
-    },
-    {
-      id: 'sedex10',
-      name: 'SEDEX 10',
-      company: 'Correios',
-      price: 44.9,
-      days: 'Até 10h do dia seguinte',
-    },
-  ];
-}
 
 export function formatCEP(value: string): string {
   const digits = value.replace(/\D/g, '').substring(0, 8);

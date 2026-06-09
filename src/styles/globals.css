@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -78,6 +76,7 @@
 
   .card-hover {
     @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-xl;
+    will-change: transform;
   }
 
   .badge {
@@ -108,6 +107,56 @@
 .belt-gradient-red-black {
   background: linear-gradient(to right, #DC2626 50%, #171717 50%);
 }
+
+/* ── 404 page animations ─────────────────────────────────────────────────── */
+@keyframes belt-slide {
+  from { transform: translateX(-60%) rotate(-4deg); opacity: 0; }
+  to   { transform: translateX(0%)   rotate(-4deg); opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.belt-animate {
+  animation: belt-slide 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.fade-up-1 { animation: fade-up 0.5s 0.30s ease both; }
+.fade-up-2 { animation: fade-up 0.5s 0.45s ease both; }
+.fade-up-3 { animation: fade-up 0.5s 0.60s ease both; }
+.fade-up-4 { animation: fade-up 0.5s 0.75s ease both; }
+
+/* 404 quick-link cards */
+.link-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 1.5px solid #e5e5e5;
+  background: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.link-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #0A0A0A;
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+}
+.link-card:hover::before  { transform: translateY(0); }
+.link-card:hover          { border-color: #0A0A0A; box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-3px); }
+.link-card .card-emoji    { position: relative; z-index: 1; display: block; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.link-card:hover .card-emoji { transform: scale(1.25); }
+.link-card .card-label    { position: relative; z-index: 1; transition: color 0.2s; }
+.link-card:hover .card-label { color: #fff; }
 
 /* Loading skeleton */
 @keyframes shimmer {

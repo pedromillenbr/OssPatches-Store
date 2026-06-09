@@ -4,14 +4,9 @@ import { persist } from 'zustand/middleware';
 interface CouponState {
   appliedCoupon: string | null;
   discountPercent: number;
-  applyCoupon: (code: string) => boolean;
+  applyCoupon: (code: string) => Promise<{ success: boolean; error?: string }>;
   removeCoupon: () => void;
 }
-
-// Coupons available
-const VALID_COUPONS: Record<string, number> = {
-  
-};
 
 export const useCouponStore = create<CouponState>()(
   persist(
@@ -19,15 +14,25 @@ export const useCouponStore = create<CouponState>()(
       appliedCoupon: null,
       discountPercent: 0,
 
-      applyCoupon: (code: string) => {
-        const upperCode = code.toUpperCase().trim();
-        const discount = VALID_COUPONS[upperCode];
+      applyCoupon: async (code: string) => {
+        try {
+          const res = await fetch('/api/coupons/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
 
-        if (discount) {
-          set({ appliedCoupon: upperCode, discountPercent: discount });
-          return true;
+          const data = await res.json();
+
+          if (data.valid) {
+            set({ appliedCoupon: data.code, discountPercent: data.discountPercent });
+            return { success: true };
+          }
+
+          return { success: false, error: data.error || 'Cupom inválido' };
+        } catch {
+          return { success: false, error: 'Erro ao validar cupom' };
         }
-        return false;
       },
 
       removeCoupon: () => {

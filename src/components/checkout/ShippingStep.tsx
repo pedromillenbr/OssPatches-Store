@@ -19,29 +19,37 @@ export default function ShippingStep() {
 
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isInternational, setIsInternational] = useState(!isBrazil);
+  const [error, setError] = useState<string | null>(null);
+  const isInternational = !isBrazil;
 
   useEffect(() => {
     async function loadOptions() {
       setLoading(true);
+      setError(null);
+
       if (isBrazil && address?.zipCode) {
         const shippingItems = items.map((item) => ({
           ...CONFIG.beltDimensions,
           quantity: item.quantity,
         }));
-        const opts = await quoteBrazilianShipping(address.zipCode, shippingItems);
-        setOptions(opts);
+        try {
+          const opts = await quoteBrazilianShipping(address.zipCode, shippingItems);
+          setOptions(opts);
+        } catch (err) {
+          setError('Não foi possível calcular o frete para este CEP. Verifique o endereço ou tente novamente.');
+          console.error(err);
+        }
       } else {
         setOptions(getInternationalShippingOptions());
-        setIsInternational(true);
       }
+
       setLoading(false);
     }
     loadOptions();
   }, [isBrazil, address, items]);
 
   const handleContinue = () => {
-    if (!selectedShipping && isBrazil) return;
+    if (isBrazil && !selectedShipping) return;
     setStep('payment');
   };
 
@@ -64,6 +72,20 @@ export default function ShippingStep() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton h-20 rounded" />
           ))}
+          <p className="text-xs text-brand-gray-400 text-center">
+            Calculando frete para seu CEP…
+          </p>
+        </div>
+      ) : error ? (
+        <div className="border border-red-200 bg-red-50 rounded px-4 py-4">
+          <p className="text-sm text-red-600 font-semibold mb-1">Erro ao calcular frete</p>
+          <p className="text-sm text-red-500">{error}</p>
+          <button
+            className="mt-3 text-xs text-red-600 underline"
+            onClick={() => setStep('address')}
+          >
+            ← Voltar e corrigir endereço
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -82,7 +104,6 @@ export default function ShippingStep() {
               disabled={isInternational}
             >
               <div className="flex items-center gap-3">
-                {/* Radio indicator */}
                 {!isInternational && (
                   <div
                     className={clsx(
@@ -128,7 +149,7 @@ export default function ShippingStep() {
         <Button
           size="lg"
           className="flex-1"
-          disabled={!isBrazil ? false : !selectedShipping}
+          disabled={isBrazil ? (!selectedShipping || !!error) : false}
           onClick={handleContinue}
         >
           Continuar → Pagamento

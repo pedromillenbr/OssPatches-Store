@@ -36,12 +36,8 @@ export default function AddressStep() {
 
   const zipValue = watch('zipCode', '');
 
-  const handleCEPLookup = async () => {
-    const raw = zipValue.replace(/\D/g, '');
-    if (raw.length < 8) {
-      toast.error('CEP incompleto');
-      return;
-    }
+  const fetchCEP = async (raw: string) => {
+    if (raw.length !== 8) return;
     setLoadingCEP(true);
     try {
       const data = await lookupCEP(raw);
@@ -54,6 +50,15 @@ export default function AddressStep() {
       toast.error('CEP não encontrado');
     } finally {
       setLoadingCEP(false);
+    }
+  };
+
+  const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCEP(e.target.value);
+    setValue('zipCode', formatted);
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.length === 8) {
+      fetchCEP(digits);
     }
   };
 
@@ -83,33 +88,25 @@ export default function AddressStep() {
           {isBrazil ? 'CEP' : 'ZIP / Postal Code'}{' '}
           <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <input
             className="input-field flex-1"
             placeholder={isBrazil ? '00000-000' : 'Postal code'}
             maxLength={isBrazil ? 9 : 12}
             {...register('zipCode', { required: 'CEP/ZIP obrigatório' })}
-            onChange={(e) => {
-              if (isBrazil) {
-                setValue('zipCode', formatCEP(e.target.value));
-              }
-            }}
+            onChange={isBrazil ? handleCEPChange : undefined}
           />
-          {isBrazil && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              loading={loadingCEP}
-              onClick={handleCEPLookup}
-              className="whitespace-nowrap"
-            >
-              Buscar
-            </Button>
+          {isBrazil && loadingCEP && (
+            <div className="w-5 h-5 border-2 border-brand-black border-t-transparent rounded-full animate-spin shrink-0" />
           )}
         </div>
         {errors.zipCode && (
           <p className="mt-1 text-xs text-red-500">{errors.zipCode.message}</p>
+        )}
+        {isBrazil && (
+          <p className="mt-1 text-xs text-brand-gray-400">
+            O endereço é preenchido automaticamente ao digitar o CEP.
+          </p>
         )}
       </div>
 
@@ -153,13 +150,39 @@ export default function AddressStep() {
           {...register('city', { required: 'Cidade obrigatória' })}
         />
         {isBrazil ? (
-          <Input
-            label="Estado (UF)"
-            placeholder="SP"
-            maxLength={2}
-            error={errors.state?.message}
-            {...register('state')}
-          />
+          <div>
+            <label className="label-field">Estado (UF)</label>
+            <select className="select-field" {...register('state')}>
+              <option value="">Selecione</option>
+              <option value="AC">Acre (AC)</option>
+              <option value="AL">Alagoas (AL)</option>
+              <option value="AP">Amapá (AP)</option>
+              <option value="AM">Amazonas (AM)</option>
+              <option value="BA">Bahia (BA)</option>
+              <option value="CE">Ceará (CE)</option>
+              <option value="DF">Distrito Federal (DF)</option>
+              <option value="ES">Espírito Santo (ES)</option>
+              <option value="GO">Goiás (GO)</option>
+              <option value="MA">Maranhão (MA)</option>
+              <option value="MT">Mato Grosso (MT)</option>
+              <option value="MS">Mato Grosso do Sul (MS)</option>
+              <option value="MG">Minas Gerais (MG)</option>
+              <option value="PA">Pará (PA)</option>
+              <option value="PB">Paraíba (PB)</option>
+              <option value="PR">Paraná (PR)</option>
+              <option value="PE">Pernambuco (PE)</option>
+              <option value="PI">Piauí (PI)</option>
+              <option value="RJ">Rio de Janeiro (RJ)</option>
+              <option value="RN">Rio Grande do Norte (RN)</option>
+              <option value="RS">Rio Grande do Sul (RS)</option>
+              <option value="RO">Rondônia (RO)</option>
+              <option value="RR">Roraima (RR)</option>
+              <option value="SC">Santa Catarina (SC)</option>
+              <option value="SP">São Paulo (SP)</option>
+              <option value="SE">Sergipe (SE)</option>
+              <option value="TO">Tocantins (TO)</option>
+            </select>
+          </div>
         ) : (
           <div>
             <label className="label-field">País</label>

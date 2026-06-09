@@ -1,3 +1,5 @@
+import StarRating from '@/components/ui/StarRating';
+
 interface ReviewCardProps {
   name: string;
   title: string;
@@ -8,18 +10,12 @@ interface ReviewCardProps {
 export default function ReviewCard({ name, title, rating, text }: ReviewCardProps) {
   return (
     <div className="bg-white border border-brand-gray-200 px-6 py-5 rounded-lg">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-semibold text-sm text-brand-black">{name}</p>
-          <p className="text-xs text-brand-gray-500">{title}</p>
+          <p className="text-xs text-brand-gray-500 mt-0.5">{title}</p>
         </div>
-        <div className="flex gap-1">
-          {[...Array(rating)].map((_, i) => (
-            <span key={i} className="text-lg">
-              ⭐
-            </span>
-          ))}
-        </div>
+        <StarRating rating={rating} />
       </div>
       <p className="text-sm text-brand-gray-700 leading-relaxed">{text}</p>
     </div>

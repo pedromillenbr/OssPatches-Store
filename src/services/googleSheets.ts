@@ -1,6 +1,13 @@
 import { google } from 'googleapis';
 import { Order } from '@/types';
 
+/** Masks CPF for LGPD compliance: "123.456.789-00" → "***.***.789-**" */
+function maskCpf(cpf: string): string {
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return '***';
+  return `***.***.${ digits.slice(6, 9) }-**`;
+}
+
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const SHEET_NAME = 'Pedidos';
 
@@ -35,7 +42,8 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
         order.createdAt,
         order.customer.name,
         order.customer.email,
-        order.customer.cpf || order.customer.phone || '',
+        order.customer.phone || '',
+        order.customer.cpf ? maskCpf(order.customer.cpf) : '',
         item.name,
         item.category,
         String(customization.type || ''),
@@ -70,12 +78,112 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
   }
 }
 
+export async function getOrderFromSheet(orderId: string): Promise<Partial<Order> | null> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return null;
+
+  try {
+    const auth = await getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${SHEET_NAME}!A:Y`,
+    });
+
+    const rows = response.data.values || [];
+    const row = rows.find((r) => r[0] === orderId);
+    if (!row) return null;
+
+    // Columns: 0=ID, 1=Date, 2=Name, 3=Email, 4=WhatsApp, 5=CPF, 6=Product,
+    //          15=Country, 16=City, 17=State, 18=ZIP, 19=Shipping,
+    //          20=ItemPrice, 21=Total, 22=Currency, 23=PaymentMethod
+    return {
+      id: row[0],
+      createdAt: row[1],
+      customer: {
+        name: row[2],
+        email: row[3],
+        phone: row[4] || undefined,
+        country: row[15] || 'Brasil',
+        countryCode: row[15] === 'Brasil' ? 'BR' : 'INT',
+      },
+      address: {
+        street: '',
+        number: '',
+        city: row[16],
+        state: row[17],
+        country: row[15],
+        countryCode: row[15] === 'Brasil' ? 'BR' : 'INT',
+        zipCode: row[18],
+      },
+      shipping: row[19] ? { id: '', name: row[19], company: '', price: 0, days: '' } : null,
+      subtotal: parseFloat(row[20]) || 0,
+      shippingCost: 0,
+      total: parseFloat(row[21]) || 0,
+      currency: row[22] || 'BRL',
+      items: [{ name: row[6] } as never],
+      payment: { method: (row[23] as never) || 'pix' },
+      status: 'confirmed',
+    };
+  } catch (error) {
+    console.error('[sheets] Failed to get order:', error);
+    return null;
+  }
+}
+
+export async function updateOrderStatusInSheet(
+  orderId: string,
+  status: string,
+  mpPaymentId: string
+): Promise<void> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return;
+
+  try {
+    const auth = await getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Read all rows to find the order
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${SHEET_NAME}!A:Y`,
+    });
+
+    const rows = response.data.values || [];
+    const rowIndexes: number[] = [];
+
+    rows.forEach((row, index) => {
+      if (row[0] === orderId) rowIndexes.push(index + 1); // 1-based
+    });
+
+    if (rowIndexes.length === 0) {
+      console.warn(`[sheets] Order ${orderId} not found in sheet`);
+      return;
+    }
+
+    // Update status (col Y = index 24) and add MP payment ID note
+    for (const rowIndex of rowIndexes) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${SHEET_NAME}!Y${rowIndex}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [[status]] },
+      });
+    }
+
+    console.log(`[sheets] Updated ${rowIndexes.length} row(s) for order ${orderId} → ${status} (MP: ${mpPaymentId})`);
+  } catch (error) {
+    console.error('[sheets] Failed to update order status:', error);
+  }
+}
+
 export async function ensureSheetHeaders(spreadsheetId: string): Promise<void> {
   const auth = await getAuthClient();
   const sheets = google.sheets({ version: 'v4', auth });
 
   const headers = [
-    'ID Pedido', 'Data', 'Nome', 'Email', 'CPF/Telefone',
+    'ID Pedido', 'Data', 'Nome', 'Email', 'WhatsApp', 'CPF',
     'Produto', 'Categoria', 'Tipo', 'Tamanho', 'Grau',
     'Nome Bordado', 'Formato', 'Quantidade', 'Arte (Patch)',
     'País', 'Cidade', 'Estado', 'CEP/ZIP',
@@ -85,7 +193,7 @@ export async function ensureSheetHeaders(spreadsheetId: string): Promise<void> {
 
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${SHEET_NAME}!A1:X1`,
+    range: `${SHEET_NAME}!A1:Y1`,
   });
 
   if (!existing.data.values || existing.data.values.length === 0) {

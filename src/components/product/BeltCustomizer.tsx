@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Product } from '@/types';
 import { formatPrice } from '@/services/products';
 import { useCartStore } from '@/store/cartStore';
+import { trackAddToCart } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import DynamicMessage from '@/components/ui/DynamicMessage';
+import BeltPreview from '@/components/product/BeltPreview';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -29,8 +31,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
   const isKidsBelt = product.category === 'belt-kids';
   const isWhiteKidsBelt = isKidsBelt && product.id === 'faixa-branca-infantil';
   const showStripeOption = isKidsBelt && !isWhiteKidsBelt;
-  const price =
-    productType === 'custom' ? product.customPrice : product.basePrice;
+  const price = productType === 'custom' ? product.customPrice : product.basePrice;
 
   const handleAdd = async () => {
     if (productType === 'custom' && !embroideredName.trim()) {
@@ -47,7 +48,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
       name: product.name,
       category: product.category,
       price,
-      quantity: quantity,
+      quantity,
       image: product.images[0] || '',
       customization: {
         type: productType,
@@ -58,6 +59,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
       },
     });
 
+    trackAddToCart({ id: product.id, name: product.name, category: product.category, price, quantity });
     toast.success('Adicionado ao carrinho!');
     setAdding(false);
   };
@@ -76,6 +78,22 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             ? 'Com nome bordado e personalização'
             : 'Faixa padrão sem personalização'}
         </p>
+      </div>
+
+      {/* Live belt preview */}
+      <div className="bg-brand-gray-50 border border-brand-gray-200 px-4 pt-3 pb-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-gray-400 mb-1">
+          Pré-visualização
+        </p>
+        <BeltPreview
+          colorHex={product.colorHex}
+          colorHexSecondary={product.colorHexSecondary}
+          color={product.color}
+          degree={degree}
+          stripe={stripe}
+          embroideredName={productType === 'custom' ? embroideredName : undefined}
+          size={String(size)}
+        />
       </div>
 
       {/* Type toggle */}
@@ -124,7 +142,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
           ))}
         </div>
         <p className="text-xs text-brand-gray-400 mt-2">
-          {isKidsBelt ? 'M0 → M7' : 'A0 → A7'}
+          {isKidsBelt ? 'M0 → M7' : 'A0 a A7 — escolha pelo seu peso e altura'}
         </p>
       </div>
 
@@ -138,10 +156,10 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
                 key={d}
                 onClick={() => setDegree(d)}
                 className={clsx(
-                  'w-10 h-10 text-sm font-medium border transition-all duration-200 ease-out transform',
+                  'w-10 h-10 text-sm font-medium border transition-all duration-200 ease-out',
                   degree === d
                     ? 'bg-brand-black text-white border-brand-black shadow-sm'
-                    : 'bg-white text-brand-black border-brand-gray-300 hover:border-brand-black hover:bg-brand-gray-50 hover:-translate-y-0.5 hover:shadow-sm'
+                    : 'bg-white text-brand-black border-brand-gray-300 hover:border-brand-black hover:bg-brand-gray-50'
                 )}
               >
                 {d}
@@ -151,7 +169,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
         </div>
       )}
 
-      {/* Stripe option — ONLY for non-white kids belts */}
+      {/* Stripe option — only for non-white kids belts */}
       {showStripeOption && (
         <div className="animate-fade-in">
           <label className="label-field">Listra</label>
@@ -165,24 +183,22 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
                 key={opt.id}
                 onClick={() => setStripe(opt.id as StripeOption)}
                 className={clsx(
-                  'w-full flex items-center gap-3 px-4 py-3 border-2 text-left transition-all duration-200 ease-out transform',
+                  'w-full flex items-center gap-3 px-4 py-3 border-2 text-left transition-all duration-200 ease-out',
                   stripe === opt.id
                     ? 'border-brand-black bg-brand-gray-50 shadow-sm'
-                    : 'border-brand-gray-200 hover:border-brand-black hover:bg-brand-gray-50 hover:-translate-y-0.5 hover:shadow-sm'
+                    : 'border-brand-gray-200 hover:border-brand-black hover:bg-brand-gray-50'
                 )}
               >
                 <div
                   className={clsx(
-                    'w-4 h-4 rounded-full border-2 shrink-0 transition-all duration-200 ease-out transform',
+                    'w-4 h-4 rounded-full border-2 shrink-0 transition-all',
                     stripe === opt.id
                       ? 'border-brand-black bg-brand-black'
-                      : 'border-brand-gray-300 hover:border-brand-black'
+                      : 'border-brand-gray-300'
                   )}
                 />
                 <div>
-                  <p className="font-semibold text-sm text-brand-black">
-                    {opt.label}
-                  </p>
+                  <p className="font-semibold text-sm text-brand-black">{opt.label}</p>
                   <p className="text-xs text-brand-gray-500">{opt.desc}</p>
                 </div>
               </button>
@@ -219,10 +235,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
           <input
             type="number"
             value={quantity}
-            onChange={(e) => {
-              const val = parseInt(e.target.value) || 1;
-              setQuantity(Math.max(1, val));
-            }}
+            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-16 text-center border border-brand-gray-300 px-2 py-2 text-sm"
             min="1"
           />
@@ -239,7 +252,19 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
       </div>
 
       {/* Summary */}
-      <div className="bg-brand-gray-50 px-4 py-3 text-sm">
+      <div className="bg-brand-gray-50 border border-brand-gray-200 px-4 py-3 text-sm">
+        {/* Compact preview inside summary */}
+        <div className="mb-3">
+          <BeltPreview
+            colorHex={product.colorHex}
+            colorHexSecondary={product.colorHexSecondary}
+            color={product.color}
+            degree={degree}
+            stripe={stripe}
+            embroideredName={productType === 'custom' ? embroideredName : undefined}
+            compact
+          />
+        </div>
         <div className="space-y-1 text-brand-gray-600">
           <div className="flex justify-between">
             <span>Tipo:</span>
@@ -259,9 +284,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             <div className="flex justify-between">
               <span>Listra:</span>
               <span className="font-medium text-brand-black capitalize">
-                {stripe === 'none'
-                  ? 'Sem listra'
-                  : `Com listra ${stripe}`}
+                {stripe === 'none' ? 'Sem listra' : `Com listra ${stripe}`}
               </span>
             </div>
           )}
@@ -272,20 +295,19 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             </div>
           )}
           <div className="flex justify-between border-t border-brand-gray-200 pt-2 mt-2">
-            <span className="font-semibold text-brand-black">Subtotal ({quantity}x):</span>
-            <span className="font-bold text-brand-black">{formatPrice(price * quantity)}</span>
+            <span className="font-semibold text-brand-black">
+              Subtotal ({quantity}x):
+            </span>
+            <span className="font-bold text-brand-black">
+              {formatPrice(price * quantity)}
+            </span>
           </div>
         </div>
       </div>
 
       <DynamicMessage step="customizing" />
 
-      <Button
-        size="lg"
-        fullWidth
-        loading={adding}
-        onClick={handleAdd}
-      >
+      <Button size="lg" fullWidth loading={adding} onClick={handleAdd}>
         Adicionar ao carrinho
       </Button>
     </div>

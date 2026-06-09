@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 
@@ -8,6 +8,8 @@ interface ProductGalleryProps {
   colorHex: string;
   colorHexSecondary?: string;
   color: string;
+  selectedIndex?: number;
+  onSelectIndex?: (index: number) => void;
 }
 
 export default function ProductGallery({
@@ -16,20 +18,66 @@ export default function ProductGallery({
   colorHex,
   colorHexSecondary,
   color,
+  selectedIndex,
+  onSelectIndex,
 }: ProductGalleryProps) {
-  const [selected, setSelected] = useState(0);
+  const [internalSelected, setInternalSelected] = useState(0);
+  const [zoom, setZoom] = useState(false);
+  const [scale, setScale] = useState(1.75);
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selected = selectedIndex !== undefined ? selectedIndex : internalSelected;
+  const setSelected = (i: number) => {
+    setInternalSelected(i);
+    onSelectIndex?.(i);
+  };
+
   const isRedBlack = color === 'red-black';
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setOrigin({ x, y });
+  };
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!zoom) return;
+    e.preventDefault();
+    setScale((prev) => Math.min(3.5, Math.max(1.5, prev - e.deltaY * 0.003)));
+  }, [zoom]);
 
   return (
     <div className="space-y-4">
       {/* Main display */}
-      <div className="aspect-square bg-brand-gray-50 border border-brand-gray-200 relative overflow-hidden">
+      <div
+        ref={containerRef}
+        className={clsx(
+          'aspect-square bg-brand-gray-50 border border-brand-gray-200 relative overflow-hidden',
+          images.length > 0 && (zoom ? 'cursor-zoom-out' : 'cursor-zoom-in')
+        )}
+        onMouseEnter={() => { if (images.length > 0) { setZoom(true); setScale(1.75); } }}
+        onMouseLeave={() => setZoom(false)}
+        onMouseMove={handleMouseMove}
+        onWheel={handleWheel}
+      >
         {images.length > 0 ? (
           <Image
             src={images[selected]}
             alt={productName}
             fill
-            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover transition-transform duration-100"
+            style={
+              zoom
+                ? {
+                    transformOrigin: `${origin.x}% ${origin.y}%`,
+                    transform: `scale(${scale})`,
+                  }
+                : undefined
+            }
             priority
           />
         ) : (
@@ -69,7 +117,6 @@ export default function ProductGallery({
             </button>
           ))
         ) : (
-          // Fallback thumbnails when no real images
           [0, 1, 2].map((i) => (
             <div
               key={i}

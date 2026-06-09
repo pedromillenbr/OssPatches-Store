@@ -1,37 +1,15 @@
-export default function TrustBadges() {
-  const badges = [
-    {
-      icon: '🏭',
-      title: 'Produção própria',
-      desc: 'Fabricamos localmente todo o material vendido',
-    },
-    {
-      icon: '🥋',
-      title: 'Padrão IBJJF',
-      desc: 'Faixas homologadas e aprovadas para competição',
-    },
-    {
-      icon: '✍️',
-      title: 'Personalização',
-      desc: 'Nome bordado, graus, arte e designs customizados',
-    },
-    {
-      icon: '🚚',
-      title: 'Envio rápido',
-      desc: 'Postagem em até 3 dias úteis (Brasil)',
-    },
-    {
-      icon: '🌍',
-      title: 'Envio mundial',
-      desc: 'Enviamos para qualquer lugar do globo',
-    },
-    {
-      icon: '💎',
-      title: 'Qualidade premium',
-      desc: 'Materiais de alta qualidade que não desmancham nem desfiam',
-    },
-  ];
+import Emoji from '@/components/ui/Emoji';
 
+const BADGES = [
+  { emoji: '🏭', title: 'Produção própria', desc: 'Fabricamos localmente todo o material vendido' },
+  { emoji: '🥋', title: 'Padrão IBJJF', desc: 'Faixas homologadas e aprovadas para competição' },
+  { emoji: '✍️', title: 'Personalização', desc: 'Nome bordado, graus, arte e designs customizados' },
+  { emoji: '🚚', title: 'Envio rápido', desc: 'Postagem em até 7 dias úteis (Brasil)' },
+  { emoji: '🌍', title: 'Envio mundial', desc: 'Enviamos para qualquer lugar do globo' },
+  { emoji: '💎', title: 'Qualidade premium', desc: 'Materiais de alta qualidade que não desmancham nem desfiam' },
+];
+
+export default function TrustBadges() {
   return (
     <section className="py-16 sm:py-20 bg-white border-t border-brand-gray-200">
       <div className="container-site">
@@ -48,12 +26,14 @@ export default function TrustBadges() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {badges.map((badge) => (
+          {BADGES.map((badge) => (
             <div
               key={badge.title}
               className="flex items-start gap-4 p-5 border border-brand-gray-200 rounded-lg hover:border-brand-black transition-colors"
             >
-              <div className="text-3xl shrink-0">{badge.icon}</div>
+              <div className="shrink-0">
+                <Emoji char={badge.emoji} size={32} />
+              </div>
               <div>
                 <h3 className="font-bold text-brand-black mb-1">{badge.title}</h3>
                 <p className="text-sm text-brand-gray-600">{badge.desc}</p>

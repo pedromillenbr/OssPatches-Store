@@ -3,17 +3,27 @@ import { useDropzone } from 'react-dropzone';
 import { PatchProduct } from '@/types';
 import { formatPrice } from '@/services/products';
 import { useCartStore } from '@/store/cartStore';
+import { trackAddToCart } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import DynamicMessage from '@/components/ui/DynamicMessage';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
+export const FORMAT_IMAGE_INDEX: Record<PatchFormat, number> = {
+  circulo: 0,
+  triangulo: 1,
+  retangulo: 2,
+  hexagonal: 3,
+  quadrado: 4,
+};
+
 interface PatchCustomizerProps {
   product: PatchProduct;
+  onFormatChange?: (imageIndex: number) => void;
 }
 
-type PatchFormat = 'quadrado' | 'retangulo' | 'triangulo' | 'circulo' | 'hexagonal' | 'octogonal';
+type PatchFormat = 'quadrado' | 'retangulo' | 'triangulo' | 'circulo' | 'hexagonal';
 
 type KitPatchItem = {
   title: string;
@@ -27,19 +37,18 @@ type KitPatchItem = {
 };
 
 const PATCH_FORMATS: { id: PatchFormat; label: string; icon: string }[] = [
-  { id: 'quadrado', label: 'Quadrado', icon: '◻' },
-  { id: 'retangulo', label: 'Retângulo', icon: '▭' },
-  { id: 'triangulo', label: 'Triângulo', icon: '△' },
   { id: 'circulo', label: 'Círculo', icon: '●' },
+  { id: 'triangulo', label: 'Triângulo', icon: '△' },
+  { id: 'retangulo', label: 'Retângulo', icon: '▭' },
   { id: 'hexagonal', label: 'Hexágono', icon: '⬡' },
-  { id: 'octogonal', label: 'Octógono', icon: '⬠' },
+  { id: 'quadrado', label: 'Quadrado', icon: '◻' },
 ];
 
-export default function PatchCustomizer({ product }: PatchCustomizerProps) {
+export default function PatchCustomizer({ product, onFormatChange }: PatchCustomizerProps) {
   const { addItem } = useCartStore();
   const isKit = product.slug === 'kit-de-patches';
 
-  const [format, setFormat] = useState<PatchFormat>('quadrado');
+  const [format, setFormat] = useState<PatchFormat>('circulo');
   const [quantity, setQuantity] = useState(1);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [adding, setAdding] = useState(false);
@@ -54,7 +63,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
     {
       title: 'Primeiro',
       size: 'P',
-      format: 'quadrado',
+      format: 'circulo',
       artworkFile: null,
       heightCm: '10',
       widthCm: '10',
@@ -64,7 +73,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
     {
       title: 'Segundo',
       size: 'M',
-      format: 'quadrado',
+      format: 'circulo',
       artworkFile: null,
       heightCm: '10',
       widthCm: '10',
@@ -74,7 +83,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
     {
       title: 'Terceiro',
       size: 'G',
-      format: 'quadrado',
+      format: 'circulo',
       artworkFile: null,
       heightCm: '10',
       widthCm: '10',
@@ -173,11 +182,9 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
 
       case 'triangulo':
       case 'hexagonal':
-      case 'octogonal':
         const labels: { [key: string]: string } = {
           triangulo: 'Tamanho do Lado (triângulo)',
           hexagonal: 'Tamanho do Lado (hexágono)',
-          octogonal: 'Tamanho do Lado (octógono)',
         };
         return (
           <Input
@@ -226,7 +233,6 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
         return `${height}cm × ${width}cm`;
       case 'triangulo':
       case 'hexagonal':
-      case 'octogonal':
         return `Lado ${side}cm`;
       default:
         return 'N/A';
@@ -253,7 +259,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
           return;
         }
 
-        if (['triangulo', 'hexagonal', 'octogonal'].includes(item.format) && !item.sideCm) {
+        if (['triangulo', 'hexagonal'].includes(item.format) && !item.sideCm) {
           toast.error(`Informe o tamanho do lado do ${item.title.toLowerCase()}`);
           return;
         }
@@ -286,6 +292,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
         } as any,
       });
 
+      trackAddToCart({ id: product.id, name: product.name, category: product.category, price: product.basePrice, quantity: 1 });
       toast.success('Kit de patches adicionado ao carrinho!');
       setAdding(false);
       return;
@@ -302,7 +309,7 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
       return;
     }
 
-    if (['triangulo', 'hexagonal', 'octogonal'].includes(format) && !sideCm) {
+    if (['triangulo', 'hexagonal'].includes(format) && !sideCm) {
       toast.error(`Informe o tamanho do lado do ${format}`);
       return;
     }
@@ -331,11 +338,12 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
         artworkFileName: artworkFile.name,
         heightCm: format === 'quadrado' || format === 'retangulo' ? parseFloat(heightCm) : undefined,
         widthCm: format === 'quadrado' || format === 'retangulo' ? parseFloat(widthCm) : undefined,
-        sideCm: ['triangulo', 'hexagonal', 'octogonal'].includes(format) ? parseFloat(sideCm) : undefined,
+        sideCm: ['triangulo', 'hexagonal'].includes(format) ? parseFloat(sideCm) : undefined,
         circumferenceCm: format === 'circulo' ? parseFloat(circumferenceCm) : undefined,
       } as any,
     });
 
+    trackAddToCart({ id: product.id, name: product.name, category: 'patch', price: product.basePrice, quantity });
     toast.success('Adicionado ao carrinho!');
     setAdding(false);
   };
@@ -457,7 +465,10 @@ export default function PatchCustomizer({ product }: PatchCustomizerProps) {
               {PATCH_FORMATS.map((fmt) => (
                 <button
                   key={fmt.id}
-                  onClick={() => setFormat(fmt.id)}
+                  onClick={() => {
+                    setFormat(fmt.id);
+                    onFormatChange?.(FORMAT_IMAGE_INDEX[fmt.id]);
+                  }}
                   className={clsx(
                     'px-3 py-4 border-2 text-center transition-all flex flex-col items-center gap-2',
                     format === fmt.id

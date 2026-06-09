@@ -23,6 +23,8 @@ const BELT_SIZES_ADULTS: BeltSizeGuide[] = [
   { size: 'A3', length: '2.30m', width: '4.5cm' },
   { size: 'A4', length: '2.40m', width: '4.5cm' },
   { size: 'A5', length: '2.50m', width: '4.5cm' },
+  { size: 'A6', length: '2.60m', width: '4.5cm' },
+  { size: 'A7', length: '2.70m', width: '4.5cm' },
 ];
 
 interface BeltSizeGuideComponentProps {
@@ -76,7 +78,7 @@ export default function BeltSizeGuideComponent({ isKids = false }: BeltSizeGuide
         <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-lg text-sm text-brand-gray-700">
           <p className="font-semibold text-orange-900 mb-2">💡 Dica:</p>
           <p>
-            Meça sua faixa atual do início até a ponta final, sem contar a ponta bordada, para encontrar o tamanho ideal.
+            Meça sua faixa atual do início até a ponta final, para encontrar o tamanho ideal.
           </p>
         </div>
       </div>

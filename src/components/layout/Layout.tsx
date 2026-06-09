@@ -1,9 +1,11 @@
 import { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Header from './Header';
 import Footer from './Footer';
-import CartDrawer from '@/components/cart/CartDrawer';
-import WhatsAppButton from '@/components/ui/WhatsAppButton';
-import { Toaster } from 'react-hot-toast';
+
+const CartDrawer = dynamic(() => import('@/components/cart/CartDrawer'), { ssr: false });
+const WhatsAppButton = dynamic(() => import('@/components/ui/WhatsAppButton'), { ssr: false });
+const Toaster = dynamic(() => import('react-hot-toast').then(m => ({ default: m.Toaster })), { ssr: false });
 
 interface LayoutProps {
   children: ReactNode;

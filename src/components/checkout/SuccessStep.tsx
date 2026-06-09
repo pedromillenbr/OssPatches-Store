@@ -46,7 +46,11 @@ export default function SuccessStep() {
 
       <div className="bg-brand-gray-50 border border-brand-gray-200 px-6 py-5 max-w-sm mx-auto mb-8">
         <p className="text-sm text-brand-gray-700 leading-relaxed">
-          Sua compra foi confirmada! Você receberá um e-mail de confirmação com os detalhes do pedido em <strong>{customer?.email}</strong>.
+          Sua compra foi confirmada! Vamos acompanhar seu pedido pelo
+          {customer?.phone ? <> WhatsApp <strong>{customer.phone}</strong></> : ' WhatsApp'}
+          {customer?.email && (
+            <> e o comprovante será enviado para <strong>{customer.email}</strong></>
+          )}.
         </p>
       </div>
 

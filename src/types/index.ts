@@ -1,11 +1,16 @@
 // ─── Product Types ────────────────────────────────────────────────────────────
 
-export type BeltSize = 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6';
+export type BeltSize = 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6' | 'A7';
 export type KidsBeltSize = 'M0' | 'M1' | 'M2' | 'M3' | 'M4' | 'M5';
 export type PatchSize = 'P' | 'M' | 'G';
 export type PatchFormat = 'redondo' | 'retangular';
 export type BeltDegree = 0 | 1 | 2 | 3 | 4;
 export type ProductCategory = 'belt-adult' | 'belt-kids' | 'patch';
+
+export interface AggregateRating {
+  ratingValue: number;
+  reviewCount: number;
+}
 
 export interface Product {
   id: string;
@@ -22,11 +27,13 @@ export interface Product {
   features: string[];
   sizes: BeltSize[] | KidsBeltSize[];
   hasDegrees: boolean;
-  hasStripe?: boolean; // Para faixas infantis
+  hasStripe?: boolean;
   images: string[];
   inStock: boolean;
   metaTitle: string;
   metaDescription: string;
+  metaKeywords?: string;
+  aggregateRating?: AggregateRating;
   badge?: string;
 }
 
@@ -47,6 +54,8 @@ export interface PatchProduct {
   minQuantity: number;
   metaTitle: string;
   metaDescription: string;
+  metaKeywords?: string;
+  aggregateRating?: AggregateRating;
 }
 
 // ─── Cart Types ────────────────────────────────────────────────────────────────
@@ -140,6 +149,9 @@ export interface Order {
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered';
   createdAt: string;
   notes?: string;
+  couponCode?: string;
+  discountPercent?: number;
+  discountAmount?: number;
 }
 
 // ─── API Types ────────────────────────────────────────────────────────────────

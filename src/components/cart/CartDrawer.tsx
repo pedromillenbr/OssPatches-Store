@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/services/products';
+import { trackBeginCheckout } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import CartItem from './CartItem';
 import clsx from 'clsx';
@@ -123,7 +124,7 @@ export default function CartDrawer() {
             <p className="text-xs text-brand-gray-400">
               Frete calculado no checkout
             </p>
-            <Link href="/checkout" onClick={closeCart}>
+            <Link href="/checkout" onClick={() => { closeCart(); trackBeginCheckout(total, items.length); }}>
               <Button size="lg" fullWidth>
                 Finalizar compra
               </Button>

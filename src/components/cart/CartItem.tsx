@@ -1,3 +1,5 @@
+import { memo } from 'react';
+import Image from 'next/image';
 import { CartItem as CartItemType } from '@/types';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/services/products';
@@ -6,7 +8,7 @@ interface CartItemProps {
   item: CartItemType;
 }
 
-export default function CartItem({ item }: CartItemProps) {
+const CartItem = memo(function CartItem({ item }: CartItemProps) {
   const { removeItem, updateQuantity } = useCartStore();
   const customization = item.customization as unknown as Record<string, unknown>;
 
@@ -33,13 +35,14 @@ export default function CartItem({ item }: CartItemProps) {
   return (
     <div className="flex gap-4 py-4 border-b border-brand-gray-100 last:border-0">
       {/* Color swatch / image */}
-      <div className="w-16 h-16 shrink-0 bg-brand-gray-100 border border-brand-gray-200 flex items-center justify-center overflow-hidden">
+      <div className="w-16 h-16 shrink-0 bg-brand-gray-100 border border-brand-gray-200 flex items-center justify-center overflow-hidden relative">
         {item.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={item.image}
             alt={item.name}
-            className="w-full h-full object-cover"
+            fill
+            sizes="64px"
+            className="object-cover"
           />
         ) : (
           <span className="text-xs text-brand-gray-400 font-medium text-center leading-tight px-1">
@@ -102,4 +105,6 @@ export default function CartItem({ item }: CartItemProps) {
       </div>
     </div>
   );
-}
+});
+
+export default CartItem;

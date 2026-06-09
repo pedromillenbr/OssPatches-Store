@@ -39,6 +39,14 @@
       "rating": 5,
       "text": "Experiência excelente desde o pedido até a entrega. Produto de qualidade premium.",
       "date": "2024-02-20"
-    }
+    },
+    {
+      "id": 6,
+      "name": "Luiza Fernandes",
+      "title": "Faixa Roxa",
+      "rating": 5,
+      "text": "A faixa é de altíssima qualidade, o bordado é impecável e a entrega foi super rápida. Estou muito satisfeita!",
+      "date": "2024-02-15"
+   }
   ]
 }

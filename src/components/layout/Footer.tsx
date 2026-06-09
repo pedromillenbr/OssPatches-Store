@@ -90,14 +90,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/trocas"
-                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
-                >
-                  Trocas e Devoluções
-                </Link>
-              </li>
-              <li>
                 <a
                   href="https://instagram.com/osspatches"
                   target="_blank"

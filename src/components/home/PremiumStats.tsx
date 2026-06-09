@@ -85,7 +85,7 @@ export default function PremiumStats() {
           />
 
           <CountUp 
-            end={6} 
+            end={5} 
             label="Continentes atendidos" 
             
             duration={2000}

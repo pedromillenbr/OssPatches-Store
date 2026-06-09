@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Layout from '@/components/layout/Layout';
 import AthleteCard from '@/components/athletes/AthleteCard';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import athletes from '@/data/team.json';
 
 export default function AthletesPage() {
@@ -22,9 +23,10 @@ export default function AthletesPage() {
       />
 
       <Layout>
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-white relative">
+          <AnimatedBackground />
           {/* Hero */}
-          <section className="border-b border-brand-gray-200">
+          <section className="relative z-10 border-b border-brand-gray-200">
             <div className="container-site py-20 lg:py-28">
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 bg-brand-gray-100 px-3 py-1.5 mb-6">
@@ -51,7 +53,7 @@ export default function AthletesPage() {
           </section>
 
           {/* Athletes Grid */}
-          <section id="atletas" className="container-site py-20 lg:py-28">
+          <section id="atletas" className="relative z-10 container-site py-20 lg:py-28">
             <div className="mb-16">
               <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
                 Equipe de elite
@@ -72,15 +74,20 @@ export default function AthletesPage() {
           </section>
 
           {/* CTA Section */}
-          <section className="container-site py-20 lg:py-28 border-t border-brand-gray-200">
-            <div className="bg-brand-black text-white rounded-lg p-12 text-center">
-              <h2 className="text-3xl sm:text-4xl font-black mb-4">Você também pode ser campeão</h2>
-              <p className="text-brand-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+          <section className="relative z-10 container-site py-20 lg:py-28 border-t border-brand-gray-200">
+            <div className="text-center max-w-2xl mx-auto">
+              <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
+                Comece hoje
+              </p>
+              <h2 className="text-4xl sm:text-5xl font-black text-brand-black mb-6 leading-tight">
+                Você também pode ser campeão
+              </h2>
+              <p className="text-lg text-brand-gray-600 leading-relaxed mb-10">
                 Nossas faixas e patches são usados por atletas de elite em todo o mundo. Comece sua
                 jornada com OssPatches.
               </p>
               <Link href="/#faixas-adulto">
-                <Button size="lg" variant="secondary" fullWidth className="sm:w-auto">
+                <Button size="lg">
                   Ver faixas e patches
                 </Button>
               </Link>

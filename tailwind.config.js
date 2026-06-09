@@ -63,5 +63,6 @@ module.exports = {
     },
   },
   plugins: [
+    require('lightswind/plugin'),
     require('tailwindcss'),],
 };

@@ -29,8 +29,8 @@
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 0%;
 
-  --primary: 0 0% 0%;
-  --primary-foreground: 0 0% 100%;
+  --primary: var(--primarylw);
+  --primary-foreground: #fff;
 
   --secondary: 0 0% 96%;
   --secondary-foreground: 0 0% 0%;
@@ -77,8 +77,8 @@
   --popover: 0 0% 5%;
   --popover-foreground: 0 0% 100%;
 
-  --primary: 0 0% 100%;
-  --primary-foreground: 0 0% 0%;
+  --primary: var(--primarylw);
+  --primary-foreground: #fff;
 
   --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 100%;
@@ -92,8 +92,7 @@
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: #000;
-  /* Direct hex for dark border */
+  --border: 0 0% 10%;
   --input: 0 0% 20%;
   --ring: 0 0% 20%;
 
@@ -138,7 +137,7 @@
 }
 
 /* Tiny Bar Loader Animation */
-@keyframes tiny-bar-loader-anime {
+@keyframes TinyBarLoader-anime {
   0% {
     opacity: 1;
   }
@@ -173,14 +172,34 @@
   }
 }
 
+/* Circle Config Keyframes */
+@keyframes rotateClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateAnticlockwise {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
 /* Animated Gradient Border Button Property and Animation */
 /* @property MUST be defined at the global scope, not inside a rule */
-@property --border-angle {
+/* @property --border-angle {
   syntax: "<angle>";
   inherits: true;
   initial-value: 0turn;
-}
-
+} */
 @keyframes bg-spin {
   to {
     --border-angle: 1turn;
@@ -511,8 +530,8 @@ body {
   -webkit-appearance: none;
   width: 0;
   height: 0;
-  -webkit-box-shadow: -200px 0 0 200px #fff;
-  box-shadow: -200px 0 0 200px #fff;
+  -webkit-box-shadow: -200px 0 0 200px #00fffc;
+  box-shadow: -200px 0 0 200px #00fffc;
 }
 
 .animatedRangeInput .animatedRangeInputLevel::-moz-range-thumb {
@@ -520,7 +539,7 @@ body {
   height: 0;
   border-radius: 0;
   border: none;
-  box-shadow: -200px 0 0 200px #fff;
+  box-shadow: -200px 0 0 200px #00fffc;
 }
 
 /* Toggle Theme Sidebar Transitions */
@@ -711,19 +730,19 @@ body {
 }
 
 .text-primary {
-  color: hsl(var(--primary));
+  color: var(--primary);
 }
 
 .bg-primary {
-  background-color: hsl(var(--primary));
+  background-color: var(--primary);
 }
 
 .text-primary-foreground {
-  color: hsl(var(--primary-foreground));
+  color: var(--primary-foreground);
 }
 
 .bg-primary-foreground {
-  background-color: hsl(var(--primary-foreground));
+  background-color: var(--primary-foreground);
 }
 
 .text-secondary {
@@ -848,8 +867,8 @@ body {
   animation: neon-bounce 0.3s ease-in-out infinite;
 }
 
-.tiny-bar-loader {
-  animation: tiny-bar-loader-anime 1s linear infinite;
+.TinyBarLoader {
+  animation: TinyBarLoader-anime 1s linear infinite;
 }
 
 .GlassMarqueeContainer {
@@ -981,17 +1000,6 @@ body {
   font-size: 0.875rem;
 }
 
-/* Tabs Background Indicator */
-.tabs-bg-indicator {
-  position: absolute;
-  border-radius: 0.125rem;
-  background-color: hsl(var(--primary));
-  transition-property: all;
-  transition-duration: 200ms;
-  transition-timing-function: ease-out;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transform-origin: center center;
-}
 
 /* Sidebar Menu Indicator */
 .sidebar-menu-indicator {

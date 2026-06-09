@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCouponStore } from '@/store/couponStore';
+import { trackCouponApplied } from '@/lib/analytics';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -16,13 +17,15 @@ export default function CouponInput() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 200));
+    const result = await applyCoupon(code);
 
-    if (applyCoupon(code)) {
+    if (result.success) {
+      const { discountPercent } = useCouponStore.getState();
+      trackCouponApplied(code.toUpperCase(), discountPercent);
       toast.success(`Cupom ${code.toUpperCase()} aplicado!`);
       setCode('');
     } else {
-      toast.error('Cupom inválido');
+      toast.error(result.error || 'Cupom inválido');
     }
     setLoading(false);
   };

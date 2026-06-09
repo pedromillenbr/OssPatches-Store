@@ -1,4 +1,6 @@
+import { memo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Product, PatchProduct } from '@/types';
 import { formatPrice } from '@/services/products';
 import clsx from 'clsx';
@@ -11,7 +13,7 @@ function isBelt(p: Product | PatchProduct): p is Product {
   return p.category === 'belt-adult' || p.category === 'belt-kids';
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
   const belt = isBelt(product) ? product : null;
   const patch = !isBelt(product) ? product : null;
 
@@ -26,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {belt ? (
             <BeltPreview belt={belt} />
           ) : (
-            <PatchPreview />
+            <PatchPreview image={patch?.images[0]} name={product.shortName} />
           )}
 
           {/* Badge */}
@@ -105,7 +107,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
     </Link>
   );
-}
+});
+
+export default ProductCard;
 
 function BeltPreview({ belt }: { belt: Product }) {
   const isRedBlack = belt.color === 'red-black';
@@ -162,7 +166,19 @@ function BeltPreview({ belt }: { belt: Product }) {
   );
 }
 
-function PatchPreview() {
+function PatchPreview({ image, name }: { image?: string; name: string }) {
+  if (image) {
+    return (
+      <Image
+        src={image}
+        alt={name}
+        fill
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        className="object-cover"
+      />
+    );
+  }
+
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div className="w-24 h-24 rounded-full border-4 border-brand-gray-200 flex items-center justify-center">

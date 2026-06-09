@@ -34,9 +34,9 @@ Branca → Azul → Roxa → Marrom → Preta
 
 | Faixa | Preço Base | Preço Custom |
 |-------|-----------|--------------|
-| Todas | R$ 40,00  | R$ 80,00     |
+| Todas | R$ 45,00  | R$ 130,00     |
 
-**Tamanhos:** A0 (menor) → A4 (maior)
+**Tamanhos:** A0 (menor) → A7 (maior)
 **Graus:** 0, 1, 2, 3, 4
 
 ---
@@ -49,7 +49,7 @@ Branca → Cinza → Amarela → Laranja → Verde
 
 | Faixa | Preço Base | Preço Custom | Opções |
 |-------|-----------|--------------|--------|
-| Todas | R$ 40,00  | R$ 80,00     | Com/ sem listra (branca ou preta) |
+| Todas | R$ 45,00  | R$ 130,00     | Com/ sem listra (branca ou preta) |
 
 **Tamanhos:** M0 (menor) → M4 (maior)
 **Graus:** 0, 1, 2, 3, 4
@@ -63,9 +63,9 @@ Branca → Cinza → Amarela → Laranja → Verde
 
 | Patch | Intervalo | Preço |
 |-------|-----------|-------|
-| Pequeno | até 7cm | R$ 40,00 |
-| Médio | 7-15cm | R$ 40,00 |
-| Grande | acima de 15cm | R$ 40,00 |
+| Pequeno | até 12cm | R$ 13,00 |
+| Médio | 12-15cm | R$ 14,00 |
+| Grande | acima de 15-22cm | R$ 17,00 |
 
 **Formatos disponíveis:**
 - ◻ Quadrado
@@ -74,6 +74,7 @@ Branca → Cinza → Amarela → Laranja → Verde
 - ● Círculo
 - ⬡ Hexagonal
 - ◈ Octogonal
+- personalizável
 
 **Dimensões customizáveis:** Altura, largura, circunferência (em cm)
 
@@ -137,8 +138,8 @@ Exemplo de faixa:
 {
   "id": "faixa-branca-adulto",
   "name": "Faixa Branca - Adulto",
-  "basePrice": 40,
-  "customPrice": 80,
+  "basePrice": 45,
+  "customPrice": 130,
   "category": "belt-adult",
   "color": "white",
   "colorHex": "#F5F5F5",
@@ -152,11 +153,11 @@ Exemplo de patch:
 ```json
 {
   "id": "patch-pequeno",
-  "name": "Patch Pequeno (até 7cm)",
-  "basePrice": 40,
+  "name": "Patch Pequeno (até 12cm)",
+  "basePrice": 13,
   "category": "patch",
   "sizes": ["P"],
-  "formats": ["quadrado", "retangulo", "triangulo", "circulo", "hexagonal", "octogonal"]
+  "formats": ["quadrado", "retangulo", "triangulo", "circulo", "hexagonal", "octogonal", "personalizado"]
 }
 ```
 
@@ -203,6 +204,7 @@ interface Product {
   'purple': '#7C3AED',     // Roxa
   'brown': '#78350F',      // Marrom
   'black': '#171717'       // Preta
+  'red': '#ff0000'         // Vermelha
 }
 ```
 

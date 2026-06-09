@@ -5,8 +5,8 @@ export const CONFIG = {
   defaultCurrency: 'BRL',
   defaultCountry: 'BR',
 
-  // Origin postal code (for shipping quotes)
-  originCEP: '01310-100', // Replace with your actual CEP
+  // Origin postal code — Avenida das Américas 17300, Rio de Janeiro
+  originCEP: '22790-701',
 
   // Google Sheets
   spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '',
@@ -14,6 +14,11 @@ export const CONFIG = {
   // Product dimensions for shipping calc (cm / kg)
   beltDimensions: { weight: 0.15, width: 25, height: 5, length: 30 },
   patchDimensions: { weight: 0.05, width: 12, height: 2, length: 12 },
+
+  // BRL → USD fixed rate for PayPal international orders.
+  // Update this value whenever the exchange rate drifts significantly.
+  // Set via NEXT_PUBLIC_BRL_TO_USD env var to avoid redeployment.
+  brlToUsd: parseFloat(process.env.NEXT_PUBLIC_BRL_TO_USD || '0.18'),
 
   social: {
     instagram: 'https://instagram.com/osspatches',
