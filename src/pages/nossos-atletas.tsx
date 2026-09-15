@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout';
 import AthleteCard from '@/components/athletes/AthleteCard';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import athletes from '@/data/team.json';
+import { CONFIG } from '@/config';
 
 export default function AthletesPage() {
   return (
@@ -12,9 +13,9 @@ export default function AthletesPage() {
       <NextSeo
         title="Nossos Atletas | OssPatches"
         description="Conheça os atletas que vestem OssPatches. Campeões brasileiros e mundiais de Jiu-Jitsu."
-        canonical="https://osspatches.com.br/nossos-atletas"
+        canonical={`${CONFIG.siteUrl}/nossos-atletas`}
         openGraph={{
-          url: 'https://osspatches.com.br/nossos-atletas',
+          url: `${CONFIG.siteUrl}/nossos-atletas`,
           title: 'Nossos Atletas | OssPatches',
           description:
             'Conheça os atletas que vestem OssPatches. Campeões brasileiros e mundiais de Jiu-Jitsu.',

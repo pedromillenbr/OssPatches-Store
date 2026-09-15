@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const ALLOWED_ORIGINS = [
-  'https://osspatches.com.br',
-  'https://www.osspatches.com.br',
+  'https://osspatches.com',
+  'https://www.osspatches.com',
   // Allow local dev
   'http://localhost:3000',
   'http://localhost:3001',

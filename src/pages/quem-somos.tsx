@@ -7,6 +7,7 @@ import Layout from '@/components/layout/Layout';
 import GlobalPresence from '@/components/about/GlobalPresence';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Emoji from '@/components/ui/Emoji';
+import { CONFIG } from '@/config';
 
 function TimelineImage({ src, alt, year }: { src: string; alt: string; year: string }) {
   const [error, setError] = useState(false);
@@ -130,9 +131,9 @@ export default function AboutPage() {
       <NextSeo
         title="Quem Somos | OssPatches"
         description="Conheça a história de OssPatches, nossa missão de levar qualidade aos atletas de Jiu-Jitsu em todo o mundo."
-        canonical="https://osspatches.com.br/quem-somos"
+        canonical={`${CONFIG.siteUrl}/quem-somos`}
         openGraph={{
-          url: 'https://osspatches.com.br/quem-somos',
+          url: `${CONFIG.siteUrl}/quem-somos`,
           title: 'Quem Somos | OssPatches',
           description: 'Conheça a história de OssPatches e nossa missão pelo Jiu-Jitsu.',
           type: 'website',

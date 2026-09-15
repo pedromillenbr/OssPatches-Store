@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import { Order } from '@/types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-// After verifying osspatches.com.br in Resend dashboard, change to: pedidos@osspatches.com.br
+// After verifying osspatches.com in Resend dashboard, change to: pedidos@osspatches.com
 const FROM = process.env.RESEND_FROM_EMAIL || 'OssPatches <onboarding@resend.dev>';
 
 function formatPrice(value: number, currency = 'BRL'): string {
