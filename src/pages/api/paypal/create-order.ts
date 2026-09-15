@@ -29,19 +29,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const serverSubtotalBRL = priceResult.serverSubtotal;
+  const serverSubtotalUSD = priceResult.serverSubtotalUSD;
   const serverShippingBRL = Number(shippingCost) || 0;
 
-  let discountAmount = 0;
+  // O preço internacional vem de valores fixos em USD no catálogo (não de câmbio).
+  // Se algum produto não tiver preço USD, o subtotal fica 0 — recusamos a venda
+  // em vez de cobrar US$0.
+  if (!serverSubtotalUSD || serverSubtotalUSD <= 0) {
+    return res.status(422).json({ error: 'Produto sem preço internacional disponível.' });
+  }
+
+  let discountAmount = 0;      // em BRL (para registro do pedido)
+  let discountAmountUSD = 0;   // em USD (para cobrança real)
   if (couponCode && typeof couponCode === 'string') {
     const pct = VALID_COUPONS[couponCode.trim().toUpperCase()];
-    if (pct) discountAmount = Math.round(serverSubtotalBRL * pct) / 100;
+    if (pct) {
+      discountAmount = Math.round(serverSubtotalBRL * pct) / 100;
+      discountAmountUSD = Math.round(serverSubtotalUSD * pct) / 100;
+    }
   }
 
   const totalBRL = Math.round((serverSubtotalBRL - discountAmount + serverShippingBRL) * 100) / 100;
 
-  // Convert BRL → USD using the configured rate
-  const rate = CONFIG.brlToUsd;
-  const totalUSD = Math.round(totalBRL * rate * 100) / 100;
+  // Frete internacional: ainda convertido por câmbio (valor pequeno; sem preço
+  // USD fixo definido). O grosso do total agora é preço fixo em dólar.
+  const shippingUSD = Math.round(serverShippingBRL * CONFIG.brlToUsd * 100) / 100;
+  const totalUSD = Math.round((serverSubtotalUSD - discountAmountUSD + shippingUSD) * 100) / 100;
 
   const orderId = generateOrderId();
 
