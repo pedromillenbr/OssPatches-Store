@@ -10,6 +10,7 @@ import { handleCors } from '@/lib/cors';
 import { isValidCPF } from '@/lib/cpf';
 import { isValidEmail } from '@/lib/email';
 import { generateOrderId } from '@/lib/orderId';
+import { validateShippingCost } from '@/lib/shipping';
 
 async function createPixPayment(order: Order, total: number): Promise<{
   mpPaymentId: string;
@@ -126,7 +127,14 @@ export default async function handler(
     return res.status(400).json({ error: priceResult.error || 'Carrinho inválido' });
   }
   const serverSubtotal = priceResult.serverSubtotal;
-  const serverShipping = Number(shippingCost) || 0;
+
+  // Validar o frete no servidor — o cliente não pode ditar o valor. Só se aplica
+  // a pedidos brasileiros (internacional não usa Melhor Envio).
+  let serverShipping = Number(shippingCost) || 0;
+  if (isBrazilian && address?.zipCode) {
+    const shippingCheck = await validateShippingCost(address.zipCode, items, shippingCost);
+    serverShipping = shippingCheck.shippingCost;
+  }
 
   let discountPercent = 0;
   let appliedCoupon: string | null = null;

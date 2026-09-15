@@ -9,6 +9,7 @@ import { isValidCPF } from '@/lib/cpf';
 import { isValidEmail } from '@/lib/email';
 import { VALID_COUPONS } from '@/config/coupons';
 import { generateOrderId } from '@/lib/orderId';
+import { validateShippingCost } from '@/lib/shipping';
 import type { Order } from '@/types';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -42,7 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const serverSubtotal = priceResult.serverSubtotal;
-  const serverShipping = Number(shippingCost) || 0;
+
+  // Validar o frete no servidor — nunca confiar no valor enviado pelo cliente.
+  // Cartão via Mercado Pago é sempre BR, então sempre revalidamos pelo CEP.
+  let serverShipping = Number(shippingCost) || 0;
+  if (address?.zipCode) {
+    const shippingCheck = await validateShippingCost(address.zipCode, items, shippingCost);
+    serverShipping = shippingCheck.shippingCost;
+  }
 
   let discountPercent = 0;
   let appliedCoupon: string | null = null;
