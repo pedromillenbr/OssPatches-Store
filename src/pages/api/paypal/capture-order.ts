@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (await rejectIfRateLimited('paypal', req, res)) return;
 
   const raw = req.body;
-  const { paypalOrderId, ossOrderId, items, customer, address, shipping, total, shippingCost, currency, couponCode, discountPercent, discountAmount } =
+  const { paypalOrderId, ossOrderId, items, customer, address, shipping, shippingCost, couponCode, discountPercent, discountAmount } =
     sanitizeForSheets(raw);
 
   if (!paypalOrderId || !ossOrderId) {
@@ -27,6 +27,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(402).json({ error: `Pagamento não aprovado: ${capture.status}` });
     }
 
+    // Nunca confiar no `total` que o cliente mandou no corpo — usar SOMENTE o valor
+    // que o PayPal confirma ter capturado. Sem isso, um cliente poderia pagar $100 de
+    // verdade mas registrar $1 no pedido/recibo.
+    const capturedAmount = capture.purchase_units?.[0]?.payments?.captures?.[0]?.amount;
+    const paidTotal = Number(capturedAmount?.value);
+    const paidCurrency = capturedAmount?.currency_code || 'USD';
+
+    if (!Number.isFinite(paidTotal) || paidTotal <= 0) {
+      console.error('PayPal capture sem valor confirmado:', JSON.stringify(capture));
+      return res.status(502).json({ error: 'Não foi possível confirmar o valor pago. Contate o suporte.' });
+    }
+
     const now = new Date().toISOString();
     const order: Order = {
       id: ossOrderId,
@@ -35,10 +47,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       address,
       shipping: shipping || null,
       payment: { method: 'paypal' },
-      subtotal: Number(total) - Number(shippingCost || 0) + Number(discountAmount || 0),
+      subtotal: Math.round((paidTotal - Number(shippingCost || 0) + Number(discountAmount || 0)) * 100) / 100,
       shippingCost: Number(shippingCost) || 0,
-      total: Number(total),
-      currency: currency || 'USD',
+      total: paidTotal,
+      currency: paidCurrency,
       status: 'confirmed',
       createdAt: now,
       ...(couponCode ? { couponCode, discountPercent: Number(discountPercent), discountAmount: Number(discountAmount) } : {}),

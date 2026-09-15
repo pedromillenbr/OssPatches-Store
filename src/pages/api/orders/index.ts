@@ -9,15 +9,7 @@ import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
 import { isValidCPF } from '@/lib/cpf';
 import { isValidEmail } from '@/lib/email';
-
-function generateOrderId(): string {
-  const date = new Date();
-  const yy = String(date.getFullYear()).slice(-2);
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `OSS-${yy}${mm}${dd}-${rand}`;
-}
+import { generateOrderId } from '@/lib/orderId';
 
 async function createPixPayment(order: Order, total: number): Promise<{
   mpPaymentId: string;

@@ -61,11 +61,23 @@ export async function createPayPalOrder(params: {
   return res.json();
 }
 
-export async function capturePayPalOrder(paypalOrderId: string): Promise<{
+interface PayPalCaptureResult {
   status: string;
   id: string;
-  payer: { email_address?: string };
-}> {
+  payer?: { email_address?: string };
+  purchase_units?: Array<{
+    reference_id?: string;
+    payments?: {
+      captures?: Array<{
+        id: string;
+        status: string;
+        amount?: { currency_code: string; value: string };
+      }>;
+    };
+  }>;
+}
+
+export async function capturePayPalOrder(paypalOrderId: string): Promise<PayPalCaptureResult> {
   const token = await getAccessToken();
   const res = await fetch(`${BASE_URL}/v2/checkout/orders/${paypalOrderId}/capture`, {
     method: 'POST',

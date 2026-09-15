@@ -78,7 +78,9 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
   }
 }
 
-export async function getOrderFromSheet(orderId: string): Promise<Partial<Order> | null> {
+export async function getOrderFromSheet(
+  orderId: string
+): Promise<(Partial<Order> & { gatewayStatus?: string }) | null> {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   if (!spreadsheetId) return null;
 
@@ -97,7 +99,10 @@ export async function getOrderFromSheet(orderId: string): Promise<Partial<Order>
 
     // Columns: 0=ID, 1=Date, 2=Name, 3=Email, 4=WhatsApp, 5=CPF, 6=Product,
     //          15=Country, 16=City, 17=State, 18=ZIP, 19=Shipping,
-    //          20=ItemPrice, 21=Total, 22=Currency, 23=PaymentMethod
+    //          20=ItemPrice, 21=Total, 22=Currency, 23=PaymentMethod, 24=Status(Y)
+    // A coluna Y guarda o status cru do Mercado Pago (ex: "approved", "pending").
+    // Lemos ela de verdade para permitir idempotência no webhook.
+    const rawStatus = (row[24] as string | undefined) || 'pending';
     return {
       id: row[0],
       createdAt: row[1],
@@ -124,8 +129,11 @@ export async function getOrderFromSheet(orderId: string): Promise<Partial<Order>
       currency: row[22] || 'BRL',
       items: [{ name: row[6] } as never],
       payment: { method: (row[23] as never) || 'pix' },
-      status: 'confirmed',
-    };
+      // Mapeia o status cru do MP para o status interno do pedido.
+      status: rawStatus === 'approved' ? 'confirmed' : 'pending',
+      // Status cru do gateway (coluna Y), usado para idempotência no webhook.
+      gatewayStatus: rawStatus,
+    } as Partial<Order> & { gatewayStatus: string };
   } catch (error) {
     console.error('[sheets] Failed to get order:', error);
     return null;

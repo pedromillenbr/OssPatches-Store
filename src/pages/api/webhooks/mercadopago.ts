@@ -54,8 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
 
-  // Validate signature if secret is configured
-  if (secret) {
+  // Em produção o secret é obrigatório — sem ele qualquer um poderia forjar um
+  // evento de pagamento. Em dev, seguimos sem validar para facilitar testes.
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[webhook] MERCADO_PAGO_WEBHOOK_SECRET ausente em produção — rejeitando');
+      return res.status(500).json({ error: 'Webhook not configured' });
+    }
+  } else {
     const valid = validateSignature(req, secret);
     if (!valid) {
       console.warn('[webhook] Invalid signature — request rejected');
@@ -83,15 +89,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[webhook] Payment ${data.id} → status=${status} orderId=${orderId}`);
 
     if (orderId) {
+      // O Mercado Pago reenvia o mesmo webhook várias vezes. Buscamos o pedido
+      // ANTES de atualizar para saber o status anterior — assim só disparamos o
+      // e-mail de confirmação na primeira vez que o pagamento vira "approved",
+      // e não a cada reentrega.
+      const existingOrder = await getOrderFromSheet(orderId);
+      // gatewayStatus é o status cru do MP gravado na planilha (coluna Y).
+      // Se já estava "approved", o e-mail de confirmação já foi enviado antes.
+      const wasAlreadyApproved = existingOrder?.gatewayStatus === 'approved';
+
       await updateOrderStatusInSheet(orderId, status, data.id);
 
-      if (status === 'approved') {
-        const order = await getOrderFromSheet(orderId);
-        if (order?.customer?.email) {
-          sendPaymentConfirmedEmail(order as Order).catch((err) =>
-            console.error('[webhook] Email error:', err)
-          );
-        }
+      if (status === 'approved' && !wasAlreadyApproved && existingOrder?.customer?.email) {
+        sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
+          console.error('[webhook] Email error:', err)
+        );
       }
     }
 

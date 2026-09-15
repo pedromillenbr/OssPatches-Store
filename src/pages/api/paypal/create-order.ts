@@ -1,24 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createPayPalOrder } from '@/services/paypal';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
+import { isBodyTooLarge } from '@/lib/sanitize';
 import { handleCors } from '@/lib/cors';
 import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { VALID_COUPONS } from '@/config/coupons';
+import { generateOrderId } from '@/lib/orderId';
 import { CONFIG } from '@/config';
-
-function generateOrderId(): string {
-  const date = new Date();
-  const yy = String(date.getFullYear()).slice(-2);
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `OSS-${yy}${mm}${dd}-${rand}`;
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (handleCors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (await rejectIfRateLimited('paypal', req, res)) return;
+  if (isBodyTooLarge(req, 50 * 1024)) return res.status(413).json({ error: 'Requisição muito grande' });
 
   const { items, shippingCost, couponCode, countryCode } = req.body;
 

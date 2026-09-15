@@ -13,8 +13,10 @@ export default async function handler(
 
   const { mpPaymentId } = req.query;
 
-  if (!mpPaymentId || typeof mpPaymentId !== 'string') {
-    return res.status(400).json({ error: 'Missing mpPaymentId' });
+  // IDs de pagamento do Mercado Pago são sempre numéricos. Validar o formato
+  // evita injetar lixo na URL da API do MP.
+  if (!mpPaymentId || typeof mpPaymentId !== 'string' || !/^\d+$/.test(mpPaymentId)) {
+    return res.status(400).json({ error: 'Missing or invalid mpPaymentId' });
   }
 
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
