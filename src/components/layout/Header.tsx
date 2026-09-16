@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
 
@@ -18,14 +19,24 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-brand-gray-200 shadow-sm">
       <div className="container-site py-4">
         <div className="flex items-center justify-between gap-6">
-          {/* Logo */}
+          {/* Logo — emblema da águia + nome. priority: carrega primeiro (LCP). */}
           <Link
             href="/"
-            className="flex items-center gap-3 font-bold tracking-tight text-brand-black"
+            aria-label="OssPatches — página inicial"
+            className="flex items-center gap-2.5 md:gap-3 shrink-0 group"
           >
-            <span className="text-3xl">Oss</span>
-            <span className="text-brand-gray-400 font-light text-2xl">|</span>
-            <span className="text-xl md:text-2xl font-semibold">Patches</span>
+            <Image
+              src="/images/brand/emblema-aguia.svg"
+              alt="OssPatches"
+              width={48}
+              height={48}
+              priority
+              className="h-10 w-10 md:h-12 md:w-12 transition-transform duration-200 group-hover:scale-105"
+            />
+            <span className="font-black tracking-tight text-brand-black leading-none">
+              <span className="text-2xl md:text-3xl">Oss</span>
+              <span className="text-2xl md:text-3xl text-red-600">Patches</span>
+            </span>
           </Link>
 
           {/* Nav */}

@@ -42,7 +42,7 @@ export default function ProductGrid() {
         <SectionHeader
           label="Acessórios"
           title="Patches"
-          description="Patches bordados premium para personalizar seu kimono. Padrão ou totalmente personalizado."
+          description="Patches bordados premium para personalizar seu kimono. Totalmente personalizável."
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {patches.map((patch) => (
