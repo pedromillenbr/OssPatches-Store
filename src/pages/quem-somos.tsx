@@ -89,7 +89,7 @@ function TimelineEntry({
 
 export default function AboutPage() {
   const galleryImages = [
-    { id: 1, src: '/images/about/galpao-osspatches.jpg', alt: 'Galpão da OssPatches — nossa sede de produção' },
+    { id: 1, src: '/images/about/historia-1.jpg', alt: 'História OssPatches 2015' },
     { id: 2, src: '/images/about/historia-2.jpeg', alt: 'História OssPatches 2017' },
     { id: 3, src: '/images/about/historia-3.jpg', alt: 'História OssPatches 2019' },
     { id: 4, src: '/images/about/historia-4.jpg', alt: 'História OssPatches 2023' },
@@ -175,12 +175,15 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Image */}
-              <div className="w-full h-96 bg-brand-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                <div className="text-center text-brand-gray-400">
-                  <p className="text-lg font-semibold mb-2">Nossa Jornada</p>
-                  <p className="text-sm">Adicione sua foto representativa aqui</p>
-                </div>
+              {/* Image — galpão / sede da OssPatches */}
+              <div className="w-full h-96 bg-brand-gray-100 rounded-lg overflow-hidden">
+                <Image
+                  src="/images/about/galpao-osspatches.jpg"
+                  alt="Galpão da OssPatches — nossa sede de produção"
+                  width={1300}
+                  height={800}
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </section>

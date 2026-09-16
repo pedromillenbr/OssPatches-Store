@@ -26,12 +26,12 @@ export default function Header() {
             className="shrink-0 transition-opacity duration-200 hover:opacity-80"
           >
             <Image
-              src="/images/brand/wordmark-oss.svg"
+              src="/images/brand/wordmark-oss-tight.svg"
               alt="OssPatches"
-              width={64}
-              height={64}
+              width={188}
+              height={120}
               priority
-              className="h-14 w-14 md:h-16 md:w-16"
+              className="h-12 w-auto md:h-14"
             />
           </Link>
 
