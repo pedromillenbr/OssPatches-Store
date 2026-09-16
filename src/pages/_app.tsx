@@ -7,6 +7,7 @@ import { DefaultSeo, OrganizationJsonLd } from 'next-seo';
 import '@/styles/globals.css';
 import { CONFIG } from '@/config';
 import { GA_ID, pageview } from '@/lib/analytics';
+import { AuthProvider } from '@/context/AuthContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,6 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router.events]);
 
   return (
+    <AuthProvider>
     <main className={inter.className}>
       {GA_ID && (
         <>
@@ -73,5 +75,6 @@ export default function App({ Component, pageProps }: AppProps) {
       />
       <Component {...pageProps} />
     </main>
+    </AuthProvider>
   );
 }

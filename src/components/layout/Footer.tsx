@@ -80,6 +80,14 @@ export default function Footer() {
                   Nossos Atletas
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/minha-conta"
+                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
+                >
+                  Minha Conta
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -95,6 +103,14 @@ export default function Footer() {
                   className="text-sm text-brand-gray-400 hover:text-white transition-colors"
                 >
                   Política de Envios
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/politica-de-privacidade"
+                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
+                >
+                  Política de Privacidade
                 </Link>
               </li>
               <li>

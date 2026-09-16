@@ -1,14 +1,19 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useCartStore } from '@/store/cartStore';
+import { useAuth } from '@/context/AuthContext';
 import AnnouncementBar from './AnnouncementBar';
 
 export default function Header() {
   const { totalItems, toggleCart } = useCartStore();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [faixaOpen, setFaixaOpen] = useState(false);
   const [patchOpen, setPatchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -135,22 +140,114 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Cart */}
-          <button
-            onClick={toggleCart}
-            className="relative flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-colors"
-            aria-label="Abrir carrinho"
-          >
-            <CartIcon />
-            {mounted && count > 0 && (
-              <span className="absolute -top-2 -right-2 bg-brand-black text-white text-[0.65rem] font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                {count > 9 ? '9+' : count}
-              </span>
-            )}
-          </button>
+          {/* Conta + Carrinho */}
+          <div className="flex items-center gap-5">
+            {/* Conta */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAccountOpen((prev) => !prev)}
+                onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
+                className="flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-colors"
+                aria-label="Minha conta"
+                aria-expanded={accountOpen}
+              >
+                <AccountIcon />
+              </button>
+
+              {accountOpen && (
+                <div className="absolute right-0 mt-3 w-52 rounded-2xl border border-brand-gray-200 bg-white p-2 shadow-xl text-base font-medium">
+                  {mounted && user ? (
+                    <>
+                      <Link
+                        href="/minha-conta"
+                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        Meus pedidos
+                      </Link>
+                      <Link
+                        href="/minha-conta/interesses"
+                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        Interesses
+                      </Link>
+                      <Link
+                        href="/minha-conta/perfil"
+                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        Meu perfil
+                      </Link>
+                      <button
+                        onClick={async () => {
+                          setAccountOpen(false);
+                          await signOut();
+                          router.push('/');
+                        }}
+                        className="mt-1 block w-full rounded-xl px-4 py-3 text-left text-brand-gray-500 hover:bg-brand-gray-50 hover:text-brand-black"
+                      >
+                        Sair
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/entrar"
+                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        Entrar
+                      </Link>
+                      <Link
+                        href="/criar-conta"
+                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        Criar conta
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Cart */}
+            <button
+              onClick={toggleCart}
+              className="relative flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-colors"
+              aria-label="Abrir carrinho"
+            >
+              <CartIcon />
+              {mounted && count > 0 && (
+                <span className="absolute -top-2 -right-2 bg-brand-black text-white text-[0.65rem] font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {count > 9 ? '9+' : count}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </header>
+  );
+}
+
+function AccountIcon() {
+  return (
+    <svg
+      className="w-6 h-6"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth={1.8}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+      />
+    </svg>
   );
 }
 

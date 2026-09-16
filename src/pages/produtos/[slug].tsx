@@ -8,6 +8,7 @@ import ProductGallery from '@/components/product/ProductGallery';
 import BeltCustomizer from '@/components/product/BeltCustomizer';
 import PatchCustomizer from '@/components/product/PatchCustomizer';
 import UrgencyBadge from '@/components/product/UrgencyBadge';
+import SaveInterestButton from '@/components/product/SaveInterestButton';
 import BeltSizeGuide from '@/components/product/BeltSizeGuide';
 import ProductFAQ from '@/components/product/ProductFAQ';
 import RelatedProducts from '@/components/product/RelatedProducts';
@@ -164,6 +165,13 @@ export default function ProductPage({ product, allProducts }: ProductPageProps) 
               </p>
 
               <UrgencyBadge />
+
+              <SaveInterestButton
+                slug={product.slug}
+                name={product.name}
+                image={product.images[0]}
+                price={product.basePrice}
+              />
 
               {/* Features */}
               <ul className="space-y-2">

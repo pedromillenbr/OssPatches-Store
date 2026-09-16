@@ -1,10 +1,37 @@
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCheckoutStore } from '@/store/checkoutStore';
+import { useCartStore } from '@/store/cartStore';
+import { useCouponStore } from '@/store/couponStore';
 import Button from '@/components/ui/Button';
 import DynamicMessage from '@/components/ui/DynamicMessage';
+import { recordOrderForUser } from '@/lib/recordOrder';
 
 export default function SuccessStep() {
-  const { orderId, customer, reset } = useCheckoutStore();
+  const { orderId, customer, address, selectedShipping, reset } = useCheckoutStore();
+  const recorded = useRef(false);
+
+  // Espelha o pedido no Supabase se o cliente estiver logado (aba "Meus pedidos").
+  // Roda só uma vez, antes do carrinho ser limpo.
+  useEffect(() => {
+    if (recorded.current || !orderId) return;
+    recorded.current = true;
+
+    const items = useCartStore.getState().items;
+    const subtotal = useCartStore.getState().subtotal();
+    const discountPercent = useCouponStore.getState().discountPercent;
+    const discountAmount = Math.round(subtotal * discountPercent) / 100;
+
+    recordOrderForUser({
+      orderRef: orderId,
+      items,
+      address,
+      shipping: selectedShipping,
+      subtotal,
+      discountAmount,
+      currency: 'BRL',
+    });
+  }, [orderId, address, selectedShipping]);
 
   return (
     <div className="text-center py-8 animate-fade-in">
