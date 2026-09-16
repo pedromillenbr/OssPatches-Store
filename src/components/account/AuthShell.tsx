@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface AuthShellProps {
   title: string;
@@ -10,57 +9,45 @@ interface AuthShellProps {
 }
 
 /**
- * Casca visual compartilhada das telas de autenticação.
- * Lado esquerdo (desktop): painel escuro com a marca — "vestiário do atleta".
- * Lado direito: o formulário, respirando, alinhado à esquerda.
+ * Casca visual das telas de autenticação.
+ * Card único centralizado: faixa preta de marca no topo (com a ponteira
+ * âmbar/branca da graduação) + formulário compacto embaixo. Sem o painel
+ * lateral gigante que deixava a tela vazia.
  */
 export default function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="min-h-[calc(100vh-124px)] grid lg:grid-cols-2">
-      {/* Painel de marca — só no desktop */}
-      <aside className="relative hidden lg:flex flex-col justify-between bg-brand-black text-white p-12 overflow-hidden">
-        {/* Listras de ponteira de faixa, na base — o marcador de graduação da marca */}
-        <div className="absolute bottom-0 left-0 right-0 h-3 flex">
-          <span className="flex-1 bg-white/90" />
-          <span className="w-16 bg-amber-500" />
-          <span className="w-16 bg-white/90" />
-        </div>
-
-        <Link href="/" aria-label="OssPatches — início" className="relative z-10">
-          <Image
-            src="/images/brand/wordmark-oss-tight.svg"
-            alt="OssPatches"
-            width={200}
-            height={80}
-            className="h-12 w-auto invert"
-            priority
-          />
-        </Link>
-
-        <div className="relative z-10 max-w-sm">
-          <p className="text-2xl font-extrabold leading-tight tracking-tight">
-            Sua conta OssPatches.
+    <div className="flex min-h-[calc(100vh-124px)] items-center justify-center bg-brand-gray-50 px-4 py-12">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-brand-gray-200 bg-white shadow-sm">
+        {/* Topo de marca */}
+        <div className="relative bg-brand-black px-8 pb-7 pt-8 text-white">
+          <Link href="/" aria-label="OssPatches — início" className="text-2xl font-extrabold tracking-tight">
+            OSS<span className="text-brand-gray-400">patches</span>
+          </Link>
+          <p className="mt-1 text-sm text-brand-gray-400">
+            Pedidos, interesses e dados salvos.
           </p>
-          <p className="mt-4 text-brand-gray-400 leading-relaxed">
-            Acompanhe seus pedidos, guarde as peças que você quer comprar depois e
-            deixe seus dados prontos para o próximo checkout.
-          </p>
+          {/* Ponteira de faixa (graduação) na base da faixa preta */}
+          <div className="absolute inset-x-0 bottom-0 flex h-1.5">
+            <span className="flex-1 bg-white/80" />
+            <span className="w-12 bg-amber-500" />
+            <span className="w-8 bg-white/80" />
+          </div>
         </div>
-      </aside>
 
-      {/* Formulário */}
-      <section className="flex items-center justify-center px-6 py-16 sm:px-12">
-        <div className="w-full max-w-sm">
-          <h1 className="text-3xl font-extrabold tracking-tight text-brand-black">
-            {title}
-          </h1>
-          <p className="mt-2 text-brand-gray-500">{subtitle}</p>
+        {/* Formulário */}
+        <div className="px-8 py-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-brand-black">{title}</h1>
+          <p className="mt-1 text-sm text-brand-gray-500">{subtitle}</p>
 
-          <div className="mt-8">{children}</div>
+          <div className="mt-6">{children}</div>
 
-          {footer && <div className="mt-8 text-sm text-brand-gray-600">{footer}</div>}
+          {footer && (
+            <div className="mt-6 border-t border-brand-gray-100 pt-5 text-sm text-brand-gray-600">
+              {footer}
+            </div>
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

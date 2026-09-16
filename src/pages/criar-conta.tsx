@@ -41,10 +41,15 @@ export default function CriarContaPage() {
     setLoading(false);
 
     if (error) {
+      const msg = error.message.toLowerCase();
       toast.error(
-        error.message.includes('already registered')
+        msg.includes('already registered') || msg.includes('already been registered')
           ? 'Este e-mail já tem uma conta. Tente entrar.'
-          : 'Não foi possível criar a conta. Tente novamente.'
+          : msg.includes('invalid') && msg.includes('email')
+          ? 'E-mail inválido. Confira e tente de novo.'
+          : msg.includes('password')
+          ? 'Senha muito curta ou fraca (mínimo 6 caracteres).'
+          : `Não foi possível criar a conta: ${error.message}`
       );
       return;
     }
