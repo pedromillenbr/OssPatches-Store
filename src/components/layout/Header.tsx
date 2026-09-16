@@ -28,10 +28,10 @@ export default function Header() {
             <Image
               src="/images/brand/wordmark-oss-tight.svg"
               alt="OssPatches"
-              width={188}
-              height={120}
+              width={254}
+              height={100}
               priority
-              className="h-12 w-auto md:h-14"
+              className="h-11 w-auto md:h-12"
             />
           </Link>
 
