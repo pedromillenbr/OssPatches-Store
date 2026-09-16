@@ -8,7 +8,7 @@ import AnnouncementBar from './AnnouncementBar';
 
 export default function Header() {
   const { totalItems, toggleCart } = useCartStore();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -195,6 +195,15 @@ export default function Header() {
                       >
                         Meu perfil
                       </Link>
+                      {profile?.is_admin && (
+                        <Link
+                          href="/admin"
+                          className="block rounded-xl px-4 py-3 font-semibold text-brand-black hover:bg-brand-gray-50"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          Painel Admin
+                        </Link>
+                      )}
                       <button
                         onClick={async () => {
                           setAccountOpen(false);

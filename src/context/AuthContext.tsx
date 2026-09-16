@@ -17,6 +17,7 @@ export interface Profile {
   cpf: string | null;
   country_code: string | null;
   address: Record<string, unknown> | null;
+  is_admin: boolean;
 }
 
 interface AuthContextValue {
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, phone, cpf, country_code, address')
+      .select('id, full_name, avatar_url, phone, cpf, country_code, address, is_admin')
       .eq('id', userId)
       .single();
     setProfile(data ?? null);

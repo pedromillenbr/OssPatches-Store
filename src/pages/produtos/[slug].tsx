@@ -11,6 +11,7 @@ import UrgencyBadge from '@/components/product/UrgencyBadge';
 import SaveInterestButton from '@/components/product/SaveInterestButton';
 import BeltSizeGuide from '@/components/product/BeltSizeGuide';
 import ProductFAQ from '@/components/product/ProductFAQ';
+import ProductReviews from '@/components/product/ProductReviews';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { CONFIG } from '@/config';
 import { trackViewProduct } from '@/lib/analytics';
@@ -209,6 +210,9 @@ export default function ProductPage({ product, allProducts }: ProductPageProps) 
           {/* Related products */}
           <RelatedProducts current={product} products={allProducts} />
         </div>
+
+        {/* Avaliações de compra verificada (aprovadas) */}
+        <ProductReviews slug={product.slug} />
       </Layout>
     </>
   );
