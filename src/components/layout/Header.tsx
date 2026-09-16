@@ -11,6 +11,7 @@ export default function Header() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [faixaOpen, setFaixaOpen] = useState(false);
   const [patchOpen, setPatchOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -19,26 +20,38 @@ export default function Header() {
     setMounted(true);
   }, []);
 
+  // Header reage ao rolar: sombra mais forte e barra levemente mais compacta.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const count = totalItems();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-brand-gray-200 shadow-sm">
+    <header
+      className={`fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b transition-shadow duration-300 ${
+        scrolled ? 'border-brand-gray-200 shadow-lg' : 'border-transparent shadow-sm'
+      }`}
+    >
       <AnnouncementBar />
-      <div className="container-site py-4">
+      <div className={`container-site transition-all duration-300 ${scrolled ? 'py-2' : 'py-4'}`}>
         <div className="flex items-center justify-between gap-6">
           {/* Logo — wordmark oficial "OSS patches". priority: carrega primeiro (LCP). */}
           <Link
             href="/"
             aria-label="OssPatches — página inicial"
-            className="shrink-0 transition-opacity duration-200 hover:opacity-80"
+            className="shrink-0 transition-transform duration-200 hover:scale-105"
           >
             <Image
-              src="/images/brand/wordmark-oss-tight.svg"
+              src="/images/brand/wordmark-oss-trim.png"
               alt="OssPatches"
-              width={254}
-              height={100}
+              width={1728}
+              height={658}
               priority
-              className="h-14 w-auto md:h-16"
+              className={`w-auto transition-all duration-300 ${scrolled ? 'h-11 md:h-12' : 'h-14 md:h-16'}`}
             />
           </Link>
 
@@ -128,15 +141,17 @@ export default function Header() {
 
             <Link
               href="/quem-somos"
-              className="text-brand-gray-700 hover:text-brand-black transition-colors"
+              className="group relative text-brand-gray-700 hover:text-brand-black transition-colors"
             >
               Quem Somos
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-brand-black transition-all duration-300 group-hover:w-full" />
             </Link>
             <Link
               href="/nossos-atletas"
-              className="text-brand-gray-700 hover:text-brand-black transition-colors"
+              className="group relative text-brand-gray-700 hover:text-brand-black transition-colors"
             >
               Atletas
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-brand-black transition-all duration-300 group-hover:w-full" />
             </Link>
           </nav>
 
@@ -148,7 +163,7 @@ export default function Header() {
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
                 onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
-                className="flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-colors"
+                className="flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
                 aria-label="Minha conta"
                 aria-expanded={accountOpen}
               >
@@ -216,7 +231,7 @@ export default function Header() {
             {/* Cart */}
             <button
               onClick={toggleCart}
-              className="relative flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-colors"
+              className="relative flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
               aria-label="Abrir carrinho"
             >
               <CartIcon />
