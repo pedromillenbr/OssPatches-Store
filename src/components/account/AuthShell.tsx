@@ -20,9 +20,13 @@ export default function AuthShell({ title, subtitle, children, footer }: AuthShe
     <div className="flex min-h-[calc(100vh-124px)] items-center justify-center bg-brand-gray-50 px-4 py-12">
       {/* Moldura = faixa preta. O padding preto é a "largura" da faixa. */}
       <div className="relative w-full max-w-md rounded-[28px] bg-brand-black p-3 shadow-xl">
-        {/* Ponteira de graduação: barra vermelha atravessando a faixa preta
-            na lateral direita, como o grau de uma faixa preta. */}
-        <div className="absolute right-1 top-1/2 z-20 h-28 w-2 -translate-y-1/2 rounded-full bg-red-600" />
+        {/* Barra de graus da faixa preta: segmento vermelho encaixado no cós
+            preto (lado direito), com as listras pretas de graduação. */}
+        <div className="absolute right-0 top-1/2 z-20 flex h-24 w-3 -translate-y-1/2 flex-col items-center justify-center gap-2 bg-red-600">
+          <span className="h-2.5 w-full bg-brand-black" />
+          <span className="h-2.5 w-full bg-brand-black" />
+          <span className="h-2.5 w-full bg-brand-black" />
+        </div>
 
         {/* Card branco interno */}
         <div className="relative overflow-hidden rounded-[18px] bg-white px-8 py-9">

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Address } from '@/types';
 import { useCheckoutStore } from '@/store/checkoutStore';
 import { lookupCEP, formatCEP } from '@/services/shipping';
 import { COUNTRIES } from '@/config';
+import { useAuth } from '@/context/AuthContext';
+import { saveAddressToProfile } from '@/lib/saveCheckoutProfile';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import toast from 'react-hot-toast';
@@ -20,7 +22,8 @@ interface FormData {
 }
 
 export default function AddressStep() {
-  const { customer, setAddress, setStep } = useCheckoutStore();
+  const { customer, address: savedAddress, setAddress, setStep } = useCheckoutStore();
+  const { profile } = useAuth();
   const isBrazil = customer?.countryCode === 'BR';
   const [loadingCEP, setLoadingCEP] = useState(false);
 
@@ -29,10 +32,29 @@ export default function AddressStep() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: { countryCode: customer?.countryCode || 'BR' },
   });
+
+  // Pré-preenche o endereço: o desta sessão de checkout, senão o salvo na conta.
+  useEffect(() => {
+    const src = (savedAddress || profile?.address) as Address | undefined;
+    if (src && src.zipCode) {
+      reset({
+        zipCode: src.zipCode,
+        street: src.street,
+        number: src.number,
+        complement: src.complement,
+        neighborhood: src.neighborhood,
+        city: src.city,
+        state: src.state,
+        countryCode: src.countryCode || customer?.countryCode || 'BR',
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, savedAddress]);
 
   const zipValue = watch('zipCode', '');
 
@@ -77,6 +99,8 @@ export default function AddressStep() {
       countryCode: data.countryCode,
     };
     setAddress(address);
+    // Salva o endereço no perfil (se logado) para a próxima compra.
+    saveAddressToProfile(address);
     setStep('shipping');
   };
 

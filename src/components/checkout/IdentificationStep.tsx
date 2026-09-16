@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { CustomerIdentification } from '@/types';
 import { useCheckoutStore } from '@/store/checkoutStore';
@@ -6,6 +6,8 @@ import { COUNTRIES } from '@/config';
 import { formatCPF, isValidCPF } from '@/lib/cpf';
 import { formatPhoneBR, isValidPhoneBR } from '@/lib/phone';
 import { checkEmail, normalizeEmail } from '@/lib/email';
+import { useAuth } from '@/context/AuthContext';
+import { saveIdentificationToProfile } from '@/lib/saveCheckoutProfile';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -18,7 +20,8 @@ interface FormData {
 }
 
 export default function IdentificationStep() {
-  const { setCustomer, setStep } = useCheckoutStore();
+  const { customer, setCustomer, setStep } = useCheckoutStore();
+  const { user, profile } = useAuth();
   const [countryCode, setCountryCode] = useState('BR');
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const isBrazil = countryCode === 'BR';
@@ -28,10 +31,37 @@ export default function IdentificationStep() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: { countryCode: 'BR' },
   });
+
+  // Pré-preenche: prioriza o que o cliente já digitou nesta sessão de checkout;
+  // senão, usa os dados salvos na conta (perfil + e-mail do login).
+  useEffect(() => {
+    if (customer) {
+      reset({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        cpf: customer.cpf,
+        countryCode: customer.countryCode,
+      });
+      setCountryCode(customer.countryCode);
+    } else if (user) {
+      const cc = profile?.country_code || 'BR';
+      reset({
+        name: profile?.full_name || '',
+        email: user.email || '',
+        phone: profile?.phone || '',
+        cpf: profile?.cpf || '',
+        countryCode: cc,
+      });
+      setCountryCode(cc);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile, customer]);
 
   const cpfValue = watch('cpf', '');
   const phoneValue = watch('phone', '');
@@ -48,6 +78,8 @@ export default function IdentificationStep() {
       countryCode: data.countryCode,
     };
     setCustomer(customer);
+    // Salva no perfil (se logado) para a próxima compra vir pronta.
+    saveIdentificationToProfile(customer);
     setStep('address');
   };
 

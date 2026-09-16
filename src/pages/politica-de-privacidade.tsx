@@ -163,14 +163,8 @@ export default function PoliticaDePrivacidadePage() {
               . Responderemos no menor prazo possível.
             </p>
           </Section>
-
-          <Section n="10" title="Alterações nesta política">
-            <p>
-              Podemos atualizar esta política de tempos em tempos. Quando isso
-              acontecer, mudaremos a data de “última atualização” no topo desta página.
-            </p>
-          </Section>
         </div>
+        
       </article>
     </Layout>
   );
