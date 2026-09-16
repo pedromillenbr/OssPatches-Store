@@ -17,6 +17,17 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
+  async rewrites() {
+    // Proxy do Supabase pelo nosso próprio domínio. O navegador chama
+    // /sb-api/... (mesma origem) e o Next.js encaminha internamente para o
+    // Supabase. Isso evita que o Brave/bloqueadores barrem a conexão por
+    // considerarem o domínio do Supabase um "terceiro".
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) return [];
+    return [
+      { source: '/sb-api/:path*', destination: `${supabaseUrl}/:path*` },
+    ];
+  },
   async headers() {
     // Domains used by the app that must be whitelisted in CSP
     const mpDomains = 'https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadopago.com.br';
