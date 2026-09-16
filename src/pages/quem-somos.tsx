@@ -89,7 +89,7 @@ function TimelineEntry({
 
 export default function AboutPage() {
   const galleryImages = [
-    { id: 1, src: '/images/about/historia-1.jpg', alt: 'História OssPatches 2015' },
+    { id: 1, src: '/images/about/galpao-osspatches.jpg', alt: 'Galpão da OssPatches — nossa sede de produção' },
     { id: 2, src: '/images/about/historia-2.jpeg', alt: 'História OssPatches 2017' },
     { id: 3, src: '/images/about/historia-3.jpg', alt: 'História OssPatches 2019' },
     { id: 4, src: '/images/about/historia-4.jpg', alt: 'História OssPatches 2023' },

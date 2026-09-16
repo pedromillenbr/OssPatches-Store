@@ -8,19 +8,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Image
-                src="/images/brand/emblema-aguia.svg"
-                alt="OssPatches"
-                width={56}
-                height={56}
-                loading="lazy"
-                className="h-14 w-14 invert"
-              />
-              <span className="text-2xl font-black tracking-tight">
-                Oss<span className="text-red-600">Patches</span>
-              </span>
-            </div>
+            <Image
+              src="/images/brand/emblema-aguia.svg"
+              alt="OssPatches"
+              width={80}
+              height={80}
+              loading="lazy"
+              className="h-20 w-20 mb-3"
+            />
             <p className="text-brand-gray-400 text-sm leading-relaxed">
               Faixas e patches premium de Jiu-Jitsu. Produção própria, padrão
               competição e envio para todo o mundo.

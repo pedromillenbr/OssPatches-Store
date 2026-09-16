@@ -19,24 +19,20 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-brand-gray-200 shadow-sm">
       <div className="container-site py-4">
         <div className="flex items-center justify-between gap-6">
-          {/* Logo — emblema da águia + nome. priority: carrega primeiro (LCP). */}
+          {/* Logo — wordmark oficial "OSS patches". priority: carrega primeiro (LCP). */}
           <Link
             href="/"
             aria-label="OssPatches — página inicial"
-            className="flex items-center gap-2.5 md:gap-3 shrink-0 group"
+            className="shrink-0 transition-opacity duration-200 hover:opacity-80"
           >
             <Image
-              src="/images/brand/emblema-aguia.svg"
+              src="/images/brand/wordmark-oss.svg"
               alt="OssPatches"
-              width={48}
-              height={48}
+              width={64}
+              height={64}
               priority
-              className="h-10 w-10 md:h-12 md:w-12 transition-transform duration-200 group-hover:scale-105"
+              className="h-14 w-14 md:h-16 md:w-16"
             />
-            <span className="font-black tracking-tight text-brand-black leading-none">
-              <span className="text-2xl md:text-3xl">Oss</span>
-              <span className="text-2xl md:text-3xl text-red-600">Patches</span>
-            </span>
           </Link>
 
           {/* Nav */}

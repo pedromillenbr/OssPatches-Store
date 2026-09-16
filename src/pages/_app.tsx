@@ -48,7 +48,7 @@ export default function App({ Component, pageProps }: AppProps) {
           siteName: CONFIG.siteName,
           images: [
             {
-              url: `${CONFIG.siteUrl}/images/brand/emblema-aguia.png`,
+              url: `${CONFIG.siteUrl}/images/brand/aguia-simbolo.png`,
               width: 2000,
               height: 2000,
               alt: 'OssPatches — Faixas e Patches Premium de Jiu-Jitsu',
@@ -59,7 +59,7 @@ export default function App({ Component, pageProps }: AppProps) {
           cardType: 'summary_large_image',
         }}
         additionalLinkTags={[
-          { rel: 'icon', href: '/images/brand/emblema-aguia.svg', type: 'image/svg+xml' },
+          { rel: 'icon', href: '/images/brand/aguia-simbolo.svg', type: 'image/svg+xml' },
         ]}
       />
       <Component {...pageProps} />

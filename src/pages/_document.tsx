@@ -4,10 +4,10 @@ export default function Document() {
   return (
     <Html lang="pt-BR">
       <Head>
-        {/* Favicon — emblema da águia (SVG: nítido em qualquer tamanho) */}
-        <link rel="icon" href="/images/brand/emblema-aguia.svg" type="image/svg+xml" />
-        <link rel="icon" href="/images/brand/emblema-aguia.png" type="image/png" sizes="any" />
-        <link rel="apple-touch-icon" href="/images/brand/emblema-aguia.png" />
+        {/* Favicon — símbolo da águia em preto (visível na aba clara do navegador) */}
+        <link rel="icon" href="/images/brand/aguia-simbolo.svg" type="image/svg+xml" />
+        <link rel="icon" href="/images/brand/aguia-simbolo.png" type="image/png" sizes="any" />
+        <link rel="apple-touch-icon" href="/images/brand/aguia-simbolo.png" />
       </Head>
       <body>
         <Main />
