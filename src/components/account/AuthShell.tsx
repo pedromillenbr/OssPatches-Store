@@ -18,8 +18,8 @@ export default function AuthShell({ title, subtitle, children, footer }: AuthShe
     <div className="flex min-h-[calc(100vh-124px)] items-center justify-center bg-brand-gray-50 px-4 py-12">
       {/* Moldura = faixa preta. O padding preto é a "largura" da faixa. */}
       <div className="relative w-full max-w-md rounded-[28px] bg-brand-black p-3 shadow-xl">
-        {/* Tira vermelha completa descendo pela lateral direita da faixa */}
-        <div className="absolute right-0 top-8 bottom-8 z-20 w-3 bg-red-600" />
+        {/* Tira vermelha (barra da faixa) na lateral direita — compacta */}
+        <div className="absolute right-0 top-1/2 z-20 h-20 w-2.5 -translate-y-1/2 bg-red-600" />
 
         {/* Card branco interno */}
         <div className="relative overflow-hidden rounded-[18px] bg-white px-8 py-9">

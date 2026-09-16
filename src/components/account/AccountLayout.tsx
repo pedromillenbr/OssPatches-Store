@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 
 interface NavItem {
@@ -69,7 +68,8 @@ export default function AccountLayout({
       <div className="flex items-center gap-4 border-b border-brand-gray-200 pb-8">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-brand-black">
           {profile?.avatar_url ? (
-            <Image src={profile.avatar_url} alt={displayName} fill className="object-cover" sizes="64px" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
           ) : (
             <span className="flex h-full w-full items-center justify-center text-2xl font-extrabold text-white">
               {initial}

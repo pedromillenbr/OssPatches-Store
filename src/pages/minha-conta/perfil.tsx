@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import { NextSeo } from 'next-seo';
 import toast from 'react-hot-toast';
 import Layout from '@/components/layout/Layout';
@@ -9,6 +8,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { supabase } from '@/lib/supabase';
+import { formatPhoneBR } from '@/lib/phone';
 
 export default function PerfilPage() {
   const { ready } = useRequireAuth();
@@ -23,7 +23,10 @@ export default function PerfilPage() {
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name ?? '');
-      setPhone(profile.phone ?? '');
+      // Remove o código do país (+55) antes de formatar como número BR local.
+      const digits = (profile.phone ?? '').replace(/\D/g, '');
+      const local = digits.length > 11 && digits.startsWith('55') ? digits.slice(2) : digits;
+      setPhone(formatPhoneBR(local));
     }
   }, [profile]);
 
@@ -110,12 +113,11 @@ export default function PerfilPage() {
         <div className="flex items-center gap-5">
           <div className="relative h-20 w-20 overflow-hidden rounded-full bg-brand-black">
             {profile?.avatar_url ? (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={profile.avatar_url}
                 alt="Sua foto"
-                fill
-                className="object-cover"
-                sizes="80px"
+                className="h-full w-full object-cover"
               />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-white">
@@ -161,8 +163,9 @@ export default function PerfilPage() {
           <Input
             label="Telefone / WhatsApp"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
             autoComplete="tel"
+            inputMode="numeric"
             placeholder="(11) 99999-9999"
           />
           <Button type="submit" size="lg" loading={saving}>
