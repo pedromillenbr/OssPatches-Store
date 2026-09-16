@@ -17,20 +17,29 @@ interface AuthShellProps {
 export default function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
     <div className="flex min-h-[calc(100vh-124px)] items-center justify-center bg-brand-gray-50 px-4 py-12">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-brand-gray-200 bg-white shadow-sm">
-        {/* Topo de marca */}
-        <div className="relative bg-brand-black px-8 pb-7 pt-8 text-white">
-          <Link href="/" aria-label="OssPatches — início" className="text-2xl font-extrabold tracking-tight">
-            OSS<span className="text-brand-gray-400">patches</span>
-          </Link>
-          <p className="mt-1 text-sm text-brand-gray-400">
-            Pedidos, interesses e dados salvos.
-          </p>
-          {/* Ponteira de faixa (graduação) na base da faixa preta */}
-          <div className="absolute inset-x-0 bottom-0 flex h-1.5">
-            <span className="flex-1 bg-white/80" />
-            <span className="w-12 bg-amber-500" />
-            <span className="w-8 bg-white/80" />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-brand-gray-200 bg-white shadow-sm">
+        {/* Faixa preta de jiu-jitsu atravessando o topo do card, com a
+            ponteira de graduação (listra vermelha + graus) na ponta direita,
+            como uma faixa preta faixa-preta amarrada. */}
+        <div className="relative flex h-24 items-center bg-brand-black px-8 text-white">
+          <div className="relative z-10">
+            <Link href="/" aria-label="OssPatches — início" className="text-2xl font-extrabold tracking-tight">
+              OSS<span className="text-brand-gray-400">patches</span>
+            </Link>
+            <p className="mt-1 text-sm text-brand-gray-400">
+              Pedidos, interesses e dados salvos.
+            </p>
+          </div>
+
+          {/* Ponteira da faixa: barra vermelha com os "graus" (traços) */}
+          <div className="absolute right-0 top-0 bottom-0 flex w-20 flex-col">
+            <span className="h-full w-full bg-red-700" />
+            <span className="absolute inset-y-0 left-3 flex flex-col justify-center gap-1.5">
+              <span className="h-4 w-1 bg-white/90" />
+              <span className="h-4 w-1 bg-white/90" />
+              <span className="h-4 w-1 bg-white/90" />
+              <span className="h-4 w-1 bg-white/90" />
+            </span>
           </div>
         </div>
 
