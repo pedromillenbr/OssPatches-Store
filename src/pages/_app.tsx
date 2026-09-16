@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Script from 'next/script';
 import { Inter } from 'next/font/google';
-import { DefaultSeo } from 'next-seo';
+import { DefaultSeo, OrganizationJsonLd } from 'next-seo';
 import '@/styles/globals.css';
 import { CONFIG } from '@/config';
 import { GA_ID, pageview } from '@/lib/analytics';
@@ -61,6 +61,15 @@ export default function App({ Component, pageProps }: AppProps) {
         additionalLinkTags={[
           { rel: 'icon', href: '/images/brand/aguia-simbolo.svg', type: 'image/svg+xml' },
         ]}
+      />
+      {/* Structured Data da marca — ajuda o Google a exibir nome, logo e redes */}
+      <OrganizationJsonLd
+        type="Organization"
+        id={CONFIG.siteUrl}
+        name="OssPatches"
+        url={CONFIG.siteUrl}
+        logo={`${CONFIG.siteUrl}/images/brand/aguia-simbolo.png`}
+        sameAs={[CONFIG.social.instagram]}
       />
       <Component {...pageProps} />
     </main>

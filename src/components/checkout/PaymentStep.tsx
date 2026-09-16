@@ -13,6 +13,7 @@ import CouponInput from '@/components/cart/CouponInput';
 import DynamicMessage from '@/components/ui/DynamicMessage';
 import Emoji from '@/components/ui/Emoji';
 import CardForm from '@/components/checkout/CardForm';
+import SecurityBadge from '@/components/checkout/SecurityBadge';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import axios from 'axios';
@@ -530,11 +531,10 @@ export default function PaymentStep() {
               Gerar QR Code Pix
             </Button>
           </div>
-          <p className="text-xs text-brand-gray-400 text-center">
-            Seus dados são protegidos e criptografados. Compra 100% segura.
-          </p>
         </>
       )}
+
+      <SecurityBadge />
     </div>
   );
 }

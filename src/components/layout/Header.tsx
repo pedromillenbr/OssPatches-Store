@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
+import AnnouncementBar from './AnnouncementBar';
 
 export default function Header() {
   const { totalItems, toggleCart } = useCartStore();
@@ -17,6 +18,7 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-brand-gray-200 shadow-sm">
+      <AnnouncementBar />
       <div className="container-site py-4">
         <div className="flex items-center justify-between gap-6">
           {/* Logo — wordmark oficial "OSS patches". priority: carrega primeiro (LCP). */}
