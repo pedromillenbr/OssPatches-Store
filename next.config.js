@@ -22,6 +22,9 @@ const nextConfig = {
     const mpDomains = 'https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadopago.com.br';
     const gaDomains = 'https://*.google-analytics.com https://*.googletagmanager.com https://www.google.com';
     const fontDomains = 'https://fonts.googleapis.com https://fonts.gstatic.com';
+    // Supabase (login/conta): auth, banco e storage de avatares. Sem isto no
+    // connect-src, o navegador bloqueia a conexão ("Failed to fetch").
+    const supabaseDomains = 'https://*.supabase.co wss://*.supabase.co';
 
     const csp = [
       `default-src 'self'`,
@@ -29,7 +32,7 @@ const nextConfig = {
       `style-src 'self' 'unsafe-inline' ${fontDomains}`,
       `font-src 'self' data: ${fontDomains}`,
       `img-src 'self' data: blob: https: http:`,
-      `connect-src 'self' ${mpDomains} ${gaDomains} https://viacep.com.br https://sandbox.melhorenvio.com.br https://melhorenvio.com.br https://api.resend.com`,
+      `connect-src 'self' ${mpDomains} ${gaDomains} ${supabaseDomains} https://viacep.com.br https://sandbox.melhorenvio.com.br https://melhorenvio.com.br https://api.resend.com`,
       `frame-src 'self' ${mpDomains}`,
       `object-src 'none'`,
       `base-uri 'self'`,
