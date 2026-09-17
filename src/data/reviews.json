@@ -42,10 +42,12 @@
     },
     {
       "id": 6,
-      "name": "Luiza Fernandes",
-      "title": "Faixa Roxa",
+      "name": "Pedro Antônio",
+      "title": "Faixa Branca",
+      "photo": "/images/reviews/pedro antonio.jpeg",
+      "photoFocus": { "x": 54, "y": 27, "zoom": 2.5 },
       "rating": 5,
-      "text": "A faixa é de altíssima qualidade, o bordado é impecável e a entrega foi super rápida. Estou muito satisfeita!",
+      "text": "A faixa é de altíssima qualidade, o bordado é impecável e a entrega foi super rápida. Estou muito satisfeito!",
       "date": "2024-02-15"
     },
     {

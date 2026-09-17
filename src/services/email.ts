@@ -9,15 +9,29 @@ function formatPrice(value: number, currency = 'BRL'): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value);
 }
 
+/**
+ * Escapa texto vindo do cliente antes de entrar no HTML do e-mail. Sem isso,
+ * alguém podia colocar links/HTML no nome ou endereço e usar nosso remetente
+ * oficial para mandar phishing a qualquer e-mail.
+ */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function itemsTable(order: Order): string {
   return order.items
     .map((item) => {
       const c = item.customization as unknown as Record<string, unknown>;
       const detail = [
-        c.size ? `Tam: ${c.size}` : '',
-        'degree' in c ? `Grau: ${c.degree}` : '',
-        c.embroideredName ? `Nome: ${c.embroideredName}` : '',
-        c.format ? `Formato: ${c.format}` : '',
+        c.size ? `Tam: ${esc(c.size)}` : '',
+        'degree' in c ? `Grau: ${esc(c.degree)}` : '',
+        c.embroideredName ? `Nome: ${esc(c.embroideredName)}` : '',
+        c.format ? `Formato: ${esc(c.format)}` : '',
       ]
         .filter(Boolean)
         .join(' | ');
@@ -25,7 +39,7 @@ function itemsTable(order: Order): string {
       return `
         <tr>
           <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333">
-            ${item.name}${detail ? `<br><span style="color:#888;font-size:12px">${detail}</span>` : ''}
+            ${esc(item.name)}${detail ? `<br><span style="color:#888;font-size:12px">${detail}</span>` : ''}
           </td>
           <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right">
             ${formatPrice(item.price, order.currency)}
@@ -70,13 +84,13 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
 
   const isBrazil = order.currency === 'BRL';
-  const shippingName = order.shipping?.name || (isBrazil ? 'A calcular' : 'Internacional');
-  const shippingDays = order.shipping?.days || '';
+  const shippingName = esc(order.shipping?.name || (isBrazil ? 'A calcular' : 'Internacional'));
+  const shippingDays = esc(order.shipping?.days || '');
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;color:#000">Pedido recebido!</h1>
     <p style="margin:0 0 24px;color:#555;font-size:15px">
-      Olá, <strong>${order.customer.name.split(' ')[0]}</strong>! Recebemos seu pedido e já estamos preparando tudo com carinho.
+      Olá, <strong>${esc(order.customer.name.split(' ')[0])}</strong>! Recebemos seu pedido e já estamos preparando tudo com carinho.
     </p>
 
     <div style="background:#f9f9f9;border-left:4px solid #000;padding:16px 20px;margin-bottom:28px">
@@ -96,7 +110,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
       </tr>
       ${order.discountAmount ? `
       <tr>
-        <td style="padding:6px 0;font-size:14px;color:#16a34a">Cupom ${order.couponCode} (${order.discountPercent}%)</td>
+        <td style="padding:6px 0;font-size:14px;color:#16a34a">Cupom ${esc(order.couponCode)} (${esc(order.discountPercent)}%)</td>
         <td style="padding:6px 0;font-size:14px;color:#16a34a;text-align:right">-${formatPrice(order.discountAmount, order.currency)}</td>
       </tr>` : ''}
       <tr>
@@ -112,9 +126,9 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
     <div style="margin-top:28px;padding:20px;background:#f9f9f9;border:1px solid #eee">
       <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#000">Entrega</p>
       <p style="margin:0;font-size:14px;color:#555;line-height:1.6">
-        ${order.address.street}${order.address.number ? `, ${order.address.number}` : ''}${order.address.complement ? ` — ${order.address.complement}` : ''}<br>
-        ${order.address.city}${order.address.state ? `, ${order.address.state}` : ''} — ${order.address.country}<br>
-        CEP: ${order.address.zipCode}
+        ${esc(order.address.street)}${order.address.number ? `, ${esc(order.address.number)}` : ''}${order.address.complement ? ` — ${esc(order.address.complement)}` : ''}<br>
+        ${esc(order.address.city)}${order.address.state ? `, ${esc(order.address.state)}` : ''} — ${esc(order.address.country)}<br>
+        CEP: ${esc(order.address.zipCode)}
       </p>
     </div>
 
@@ -129,7 +143,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
   await resend.emails.send({
     from: FROM,
     to: order.customer.email,
-    subject: `Pedido ${order.id} recebido — OssPatches`,
+    subject: `Pedido ${order.id.replace(/[^\w-]/g, '')} recebido — OssPatches`,
     html: baseLayout(content),
   });
 }

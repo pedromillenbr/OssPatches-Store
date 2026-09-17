@@ -5,10 +5,8 @@ import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
-import { isValidCPF } from '@/lib/cpf';
-import { isValidEmail } from '@/lib/email';
-import { VALID_COUPONS } from '@/config/coupons';
 import { generateOrderId } from '@/lib/orderId';
+import { cleanAddress, cleanCustomer, cleanShippingLabel, resolveCoupon } from '@/lib/checkoutGuards';
 import { validateShippingCost } from '@/lib/shipping';
 import type { Order } from '@/types';
 
@@ -21,21 +19,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!token) return res.status(503).json({ error: 'Gateway de pagamento não configurado' });
 
-  const raw = req.body;
-  const { items, customer, address, shipping, shippingCost, couponCode, cardToken, paymentMethodId, installments, issuerId } =
+  const raw = req.body ?? {};
+  const { items, customer: rawCustomer, address: rawAddress, shipping, shippingCost, couponCode, cardToken, paymentMethodId, installments, issuerId } =
     sanitizeForSheets(raw);
 
-  if (!items?.length || !customer || !address || !cardToken || !paymentMethodId) {
+  if (!items?.length || typeof cardToken !== 'string' || !cardToken || typeof paymentMethodId !== 'string' || !/^[a-z_]{2,30}$/.test(paymentMethodId)) {
     return res.status(400).json({ error: 'Dados de pagamento incompletos' });
   }
 
-  if (!isValidEmail(customer?.email || '')) {
-    return res.status(400).json({ error: 'E-mail inválido' });
+  const customerCheck = cleanCustomer(rawCustomer);
+  if (!customerCheck.ok) return res.status(400).json({ error: customerCheck.error });
+  const customer = customerCheck.value;
+
+  // Cartão via Mercado Pago é exclusivo do Brasil.
+  if (customer.countryCode !== 'BR') {
+    return res.status(400).json({ error: 'Cartão disponível apenas para pedidos no Brasil.' });
   }
 
-  if (customer?.cpf && !isValidCPF(customer.cpf)) {
-    return res.status(400).json({ error: 'CPF inválido' });
-  }
+  // CEP válido é obrigatório — sem ele o frete não era revalidado e o valor
+  // do cliente (até negativo) era aceito.
+  const addressCheck = cleanAddress(rawAddress, 'BR');
+  if (!addressCheck.ok) return res.status(400).json({ error: addressCheck.error });
+  const address = addressCheck.value;
 
   const priceResult = verifyAndCalculateSubtotal(items);
   if (!priceResult.ok) {
@@ -45,19 +50,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const serverSubtotal = priceResult.serverSubtotal;
 
   // Validar o frete no servidor — nunca confiar no valor enviado pelo cliente.
-  // Cartão via Mercado Pago é sempre BR, então sempre revalidamos pelo CEP.
-  let serverShipping = Number(shippingCost) || 0;
-  if (address?.zipCode) {
-    const shippingCheck = await validateShippingCost(address.zipCode, items, shippingCost);
-    serverShipping = shippingCheck.shippingCost;
-  }
+  const shippingCheck = await validateShippingCost(address.zipCode, priceResult.items, shippingCost);
+  const serverShipping = shippingCheck.shippingCost;
 
-  let discountPercent = 0;
-  let appliedCoupon: string | null = null;
-  if (couponCode && typeof couponCode === 'string') {
-    const pct = VALID_COUPONS[couponCode.trim().toUpperCase()];
-    if (pct) { discountPercent = pct; appliedCoupon = couponCode.trim().toUpperCase(); }
-  }
+  const coupon = resolveCoupon(couponCode);
+  const discountPercent = coupon.percent;
+  const appliedCoupon = coupon.code;
 
   const discountAmount = Math.round(serverSubtotal * discountPercent) / 100;
   const serverTotal = Math.round((serverSubtotal - discountAmount + serverShipping) * 100) / 100;
@@ -78,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     description: `OssPatches ${orderId}`,
     installments: installmentCount,
     payment_method_id: paymentMethodId,
-    ...(issuerId ? { issuer_id: issuerId } : {}),
+    ...(issuerId && /^\d{1,10}$/.test(String(issuerId)) ? { issuer_id: String(issuerId) } : {}),
     payer: {
       email,
       first_name: nameParts[0],
@@ -136,12 +134,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const now = new Date().toISOString();
   const order: Order = {
     id: orderId,
-    items,
+    items: priceResult.items,
     customer,
     address,
-    shipping: shipping || null,
+    shipping: cleanShippingLabel(shipping, serverShipping),
     payment: {
-      method: paymentMethodId?.startsWith('debit') ? 'debit_card' : 'credit_card',
+      method: paymentMethodId.startsWith('debit') ? 'debit_card' : 'credit_card',
       installments: installmentCount,
     },
     subtotal: serverSubtotal,

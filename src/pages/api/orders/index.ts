@@ -1,16 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Order } from '@/types';
 import { appendOrderToSheet } from '@/services/googleSheets';
-import { VALID_COUPONS } from '@/config/coupons';
 import { sendOrderConfirmationEmail } from '@/services/email';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
-import { isValidCPF } from '@/lib/cpf';
-import { isValidEmail } from '@/lib/email';
 import { generateOrderId } from '@/lib/orderId';
 import { validateShippingCost } from '@/lib/shipping';
+import { cleanAddress, cleanCustomer, cleanShippingLabel, resolveCoupon } from '@/lib/checkoutGuards';
 
 async function createPixPayment(order: Order, total: number): Promise<{
   mpPaymentId: string;
@@ -91,35 +89,29 @@ export default async function handler(
     return res.status(413).json({ error: 'Requisição muito grande' });
   }
 
-  const rawBody = req.body;
-  // Sanitize all string fields before they touch Google Sheets
-  const {
-    items,
-    customer,
-    address,
-    shipping,
-    payment,
-    subtotal,
-    shippingCost,
-    couponCode,
-    currency,
-  } = sanitizeForSheets(rawBody);
+  const { items, customer: rawCustomer, address: rawAddress, shipping, payment, shippingCost, couponCode } =
+    sanitizeForSheets(req.body ?? {});
 
-  if (!items?.length || !customer || !address || !payment) {
-    return res.status(400).json({ error: 'Missing required order fields' });
+  // Esta rota só gera Pix (cartão usa /api/mp/card-payment e PayPal tem rota
+  // própria). Recusar outros métodos evita "pedidos" sem pagamento algum.
+  if (payment?.method !== 'pix') {
+    return res.status(400).json({ error: 'Forma de pagamento inválida' });
   }
 
-  // Validate email server-side — required by the payment gateway and for the
-  // confirmation receipt. Never trust the client's own validation.
-  if (!isValidEmail(customer?.email || '')) {
-    return res.status(400).json({ error: 'E-mail inválido' });
+  // Valida e reconstrói cliente/endereço só com campos conhecidos.
+  const customerCheck = cleanCustomer(rawCustomer);
+  if (!customerCheck.ok) return res.status(400).json({ error: customerCheck.error });
+  const customer = customerCheck.value;
+
+  // Pix é exclusivo do Brasil — sem isso, mandar país "US" pulava a
+  // revalidação do frete no servidor.
+  if (customer.countryCode !== 'BR') {
+    return res.status(400).json({ error: 'Pix disponível apenas para pedidos no Brasil.' });
   }
 
-  // Validate CPF for Brazilian customers
-  const isBrazilian = customer?.countryCode === 'BR';
-  if (isBrazilian && customer?.cpf && !isValidCPF(customer.cpf)) {
-    return res.status(400).json({ error: 'CPF inválido' });
-  }
+  const addressCheck = cleanAddress(rawAddress, 'BR');
+  if (!addressCheck.ok) return res.status(400).json({ error: addressCheck.error });
+  const address = addressCheck.value;
 
   // Re-derive subtotal entirely from server-side product catalog — never trust client prices
   const priceResult = verifyAndCalculateSubtotal(items);
@@ -128,25 +120,14 @@ export default async function handler(
   }
   const serverSubtotal = priceResult.serverSubtotal;
 
-  // Validar o frete no servidor — o cliente não pode ditar o valor. Só se aplica
-  // a pedidos brasileiros (internacional não usa Melhor Envio).
-  let serverShipping = Number(shippingCost) || 0;
-  if (isBrazilian && address?.zipCode) {
-    const shippingCheck = await validateShippingCost(address.zipCode, items, shippingCost);
-    serverShipping = shippingCheck.shippingCost;
-  }
+  // Frete sempre revalidado no servidor pelo CEP (nunca negativo, nunca abaixo
+  // da opção real mais barata).
+  const shippingCheck = await validateShippingCost(address.zipCode, priceResult.items, shippingCost);
+  const serverShipping = shippingCheck.shippingCost;
 
-  let discountPercent = 0;
-  let appliedCoupon: string | null = null;
-
-  if (couponCode && typeof couponCode === 'string') {
-    const upperCode = couponCode.trim().toUpperCase();
-    const discount = VALID_COUPONS[upperCode];
-    if (discount) {
-      discountPercent = discount;
-      appliedCoupon = upperCode;
-    }
-  }
+  const coupon = resolveCoupon(couponCode);
+  const discountPercent = coupon.percent;
+  const appliedCoupon = coupon.code;
 
   const discountAmount = Math.round(serverSubtotal * discountPercent) / 100;
   const serverTotal = Math.round((serverSubtotal - discountAmount + serverShipping) * 100) / 100;
@@ -156,15 +137,15 @@ export default async function handler(
 
   const order: Order = {
     id: orderId,
-    items,
+    items: priceResult.items,
     customer,
     address,
-    shipping: shipping || null,
-    payment,
+    shipping: cleanShippingLabel(shipping, serverShipping),
+    payment: { method: 'pix' },
     subtotal: serverSubtotal,
     shippingCost: serverShipping,
     total: serverTotal,
-    currency: currency || 'BRL',
+    currency: 'BRL',
     status: 'pending',
     createdAt: now,
     ...(appliedCoupon ? { couponCode: appliedCoupon, discountPercent, discountAmount } : {}),

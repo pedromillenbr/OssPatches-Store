@@ -3,30 +3,35 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 // ---------------------------------------------------------------------------
-// IP extraction — reads CF-Connecting-IP when behind Cloudflare (the real IP),
-// falls back to x-forwarded-for (trusting only the first value to avoid
-// spoofing), then the raw socket address.
+// IP extraction. O site roda na Vercel SEM Cloudflare na frente, então headers
+// como cf-connecting-ip podem ser forjados pelo próprio cliente (cada request
+// com um IP inventado = limite nunca atingido). Usamos os headers que a
+// própria Vercel define e sobrescreve na borda.
 // ---------------------------------------------------------------------------
+function firstHeader(req: NextApiRequest, name: string): string | null {
+  const value = req.headers[name];
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== 'string' || !raw) return null;
+  return raw.split(',')[0].trim() || null;
+}
+
 export function getClientIp(req: NextApiRequest): string {
-  const cf = req.headers['cf-connecting-ip'];
-  if (typeof cf === 'string' && cf) return cf.trim();
-
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-
-  return req.socket?.remoteAddress ?? 'unknown';
+  return (
+    firstHeader(req, 'x-vercel-forwarded-for') ??
+    firstHeader(req, 'x-real-ip') ??
+    firstHeader(req, 'x-forwarded-for') ??
+    req.socket?.remoteAddress ??
+    'unknown'
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Redis client — falls back to an in-memory store when env vars are absent
-// (local dev without Upstash configured). In production UPSTASH_REDIS_REST_URL
-// and UPSTASH_REDIS_REST_TOKEN must be set.
+// Redis client — null when env vars are absent (local dev without Upstash).
+// Aceita também os nomes KV_REST_API_* criados pela integração Upstash da Vercel.
 // ---------------------------------------------------------------------------
 function buildRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
   return new Redis({ url, token });
 }
@@ -42,12 +47,13 @@ type LimiterConfig = { requests: number; window: `${number} s` | `${number} m` |
 
 const limiterCache = new Map<string, Ratelimit>();
 
-function getLimiter(key: string, config: LimiterConfig): Ratelimit {
+function getLimiter(key: string, redisClient: Redis, config: LimiterConfig): Ratelimit {
   if (limiterCache.has(key)) return limiterCache.get(key)!;
 
-  const storage = redis ?? Redis.fromEnv();
   const limiter = new Ratelimit({
-    redis: storage,
+    redis: redisClient,
+    // Se o Redis não responder rápido, não seguramos o checkout do cliente.
+    timeout: 3000,
     limiter: Ratelimit.slidingWindow(config.requests, config.window),
     prefix: `rl:${key}`,
     analytics: false,
@@ -93,7 +99,7 @@ export async function rejectIfRateLimited(
   }
 
   const ip = getClientIp(req);
-  const limiter = getLimiter(key, config);
+  const limiter = getLimiter(key, redis, config);
 
   let result: Awaited<ReturnType<Ratelimit['limit']>>;
   try {

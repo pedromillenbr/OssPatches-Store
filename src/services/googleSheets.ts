@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { Order } from '@/types';
+import { sanitizeSheetValue } from '@/lib/sanitize';
 
 /** Masks CPF for LGPD compliance: "123.456.789-00" → "***.***.789-**" */
 function maskCpf(cpf: string): string {
@@ -58,17 +59,21 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
         order.address.state || '',
         order.address.zipCode,
         order.shipping?.name || 'A calcular',
-        item.price.toFixed(2),
-        order.total.toFixed(2),
+        Math.round(item.price * 100) / 100,
+        Math.round(order.total * 100) / 100,
         order.currency,
         order.payment.method,
         order.status,
-      ];
+        order.notes || '',
+      ].map((cell) => (typeof cell === 'string' ? sanitizeSheetValue(cell) : cell));
 
+      // RAW: o Sheets grava o texto exatamente como veio, SEM interpretar
+      // fórmulas. Com USER_ENTERED, um nome como "=IMAGE(...)" virava fórmula
+      // e podia vazar dados de outros clientes ao abrir a planilha.
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: `${SHEET_NAME}!A1`,
-        valueInputOption: 'USER_ENTERED',
+        valueInputOption: 'RAW',
         requestBody: { values: [row] },
       });
     }
@@ -175,8 +180,8 @@ export async function updateOrderStatusInSheet(
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${SHEET_NAME}!Y${rowIndex}`,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [[status]] },
+        valueInputOption: 'RAW',
+        requestBody: { values: [[sanitizeSheetValue(status)]] },
       });
     }
 
@@ -196,12 +201,12 @@ export async function ensureSheetHeaders(spreadsheetId: string): Promise<void> {
     'Nome Bordado', 'Formato', 'Quantidade', 'Arte (Patch)',
     'País', 'Cidade', 'Estado', 'CEP/ZIP',
     'Método Envio', 'Valor Produto', 'Total', 'Moeda',
-    'Pagamento', 'Status',
+    'Pagamento', 'Status', 'Observações',
   ];
 
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${SHEET_NAME}!A1:Y1`,
+    range: `${SHEET_NAME}!A1:Z1`,
   });
 
   if (!existing.data.values || existing.data.values.length === 0) {
