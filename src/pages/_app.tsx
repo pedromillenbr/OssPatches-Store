@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import { DefaultSeo, OrganizationJsonLd } from 'next-seo';
@@ -28,6 +29,18 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <AuthProvider>
     <main className={inter.className}>
+      <Head>
+        {/*
+          Sem esta linha o celular renderiza a página como se fosse um desktop
+          encolhido. viewport-fit=cover libera a área do notch/ilha dinâmica.
+        */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#0A0A0A" />
+        <meta name="format-detection" content="telephone=no" />
+      </Head>
       {GA_ID && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />

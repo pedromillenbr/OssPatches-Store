@@ -13,6 +13,7 @@ import BeltSizeGuide from '@/components/product/BeltSizeGuide';
 import ProductFAQ from '@/components/product/ProductFAQ';
 import ProductReviews from '@/components/product/ProductReviews';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import MobileBuyBar from '@/components/product/MobileBuyBar';
 import { CONFIG } from '@/config';
 import { trackViewProduct } from '@/lib/analytics';
 import Link from 'next/link';
@@ -122,15 +123,15 @@ export default function ProductPage({ product, allProducts }: ProductPageProps) 
       <Layout>
         <div className="container-site py-8 sm:py-12">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-brand-gray-400 mb-8">
+          <nav className="flex items-center gap-2 text-sm text-brand-gray-400 mb-5 sm:mb-8">
             <Link href="/" className="hover:text-brand-black transition-colors">
               Home
             </Link>
             <span>/</span>
-            <span className="text-brand-black">{product.name}</span>
+            <span className="truncate text-brand-black">{product.name}</span>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
             {/* Gallery */}
             <div>
               <ProductGallery
@@ -189,9 +190,11 @@ export default function ProductPage({ product, allProducts }: ProductPageProps) 
 
               <hr className="border-brand-gray-200" />
 
-              {/* Customizer */}
-              {belt && <BeltCustomizer product={belt} />}
-              {patch && <PatchCustomizer product={patch} onFormatChange={setPatchImageIndex} />}
+              {/* Customizer — alvo da barra fixa de compra do celular */}
+              <div id="comprar" className="scroll-mt-4">
+                {belt && <BeltCustomizer product={belt} />}
+                {patch && <PatchCustomizer product={patch} onFormatChange={setPatchImageIndex} />}
+              </div>
             </div>
           </div>
 
@@ -213,6 +216,15 @@ export default function ProductPage({ product, allProducts }: ProductPageProps) 
 
         {/* Avaliações de compra verificada (aprovadas) */}
         <ProductReviews slug={product.slug} />
+
+        {/* Espaço extra para a barra fixa não tapar o fim da página */}
+        <div className="h-20 lg:hidden" aria-hidden="true" />
+
+        <MobileBuyBar
+          price={product.basePrice}
+          targetId="comprar"
+          label={belt ? 'Escolher tamanho' : 'Personalizar'}
+        />
       </Layout>
     </>
   );

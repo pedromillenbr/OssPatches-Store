@@ -20,13 +20,13 @@ export default function CartPage() {
     <>
       <NextSeo title="Carrinho" noindex />
       <Layout>
-        <div className="container-site py-12">
-          <h1 className="text-3xl font-black text-brand-black mb-8">
+        <div className="container-site py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl font-black text-brand-black mb-6 sm:mb-8">
             Carrinho
           </h1>
 
           {items.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-14 sm:py-20">
               <p className="text-xl font-semibold text-brand-black mb-3">
                 Seu carrinho está vazio
               </p>
@@ -38,7 +38,7 @@ export default function CartPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
               {/* Items */}
               <div className="lg:col-span-2">
                 <div className="divide-y divide-brand-gray-100">

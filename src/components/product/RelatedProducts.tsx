@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { getPatchCardImage } from '@/lib/patchImages';
 import { Product, PatchProduct } from '@/types';
 import { formatPrice } from '@/services/products';
 import clsx from 'clsx';
@@ -90,9 +91,9 @@ export default function RelatedProducts({ current, products }: RelatedProductsPr
                       />
                     </div>
                   </div>
-                ) : product.images[0] ? (
+                ) : getPatchCardImage(product.slug, product.images) ? (
                   <Image
-                    src={product.images[0]}
+                    src={getPatchCardImage(product.slug, product.images) as string}
                     alt={product.name}
                     fill
                     sizes="(max-width: 640px) 50vw, 25vw"

@@ -15,14 +15,14 @@ interface AuthShellProps {
  */
 export default function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="flex min-h-[calc(100vh-124px)] items-center justify-center bg-brand-gray-50 px-4 py-12">
+    <div className="flex min-h-[calc(100svh-var(--header-h,110px))] items-center justify-center bg-brand-gray-50 px-4 py-8 sm:py-12">
       {/* Moldura = faixa preta. O padding preto é a "largura" da faixa. */}
       <div className="relative w-full max-w-md rounded-[28px] bg-brand-black p-3 shadow-xl">
         {/* Tira vermelha (barra da faixa) na lateral direita — compacta */}
         <div className="absolute right-0 top-1/2 z-20 h-20 w-2.5 -translate-y-1/2 bg-red-600" />
 
         {/* Card branco interno */}
-        <div className="relative overflow-hidden rounded-[18px] bg-white px-8 py-9">
+        <div className="relative overflow-hidden rounded-[18px] bg-white px-5 py-7 sm:px-8 sm:py-9">
           <h1 className="text-2xl font-extrabold tracking-tight text-brand-black">{title}</h1>
           <p className="mt-1 text-sm text-brand-gray-500">{subtitle}</p>
 

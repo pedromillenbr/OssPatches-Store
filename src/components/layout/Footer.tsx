@@ -3,9 +3,9 @@ import Image from 'next/image';
 
 export default function Footer() {
   return (
-    <footer className="bg-brand-black text-white mt-24">
-      <div className="container-site py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-brand-black text-white mt-14 sm:mt-24">
+      <div className="container-site py-10 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
           {/* Brand */}
           <div>
             <Image
@@ -127,7 +127,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-brand-gray-800 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="border-t border-brand-gray-800 mt-10 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-brand-gray-500">
             © {new Date().getFullYear()} OssPatches. Todos os direitos
             reservados.

@@ -43,7 +43,7 @@ export default function CartDrawer() {
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-brand-gray-200">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-brand-gray-200">
           <div>
             <h2 className="font-bold text-lg text-brand-black">Carrinho</h2>
             <p className="text-xs text-brand-gray-500">
@@ -52,11 +52,11 @@ export default function CartDrawer() {
           </div>
           <button
             onClick={closeCart}
-            className="w-8 h-8 flex items-center justify-center hover:bg-brand-gray-100 transition-colors"
+            className="tap-target -mr-2 hover:bg-brand-gray-100 transition-colors"
             aria-label="Fechar carrinho"
           >
             <svg
-              className="w-5 h-5"
+              className="w-6 h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -72,7 +72,7 @@ export default function CartDrawer() {
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-16">
               <div className="w-16 h-16 border-2 border-brand-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -114,7 +114,7 @@ export default function CartDrawer() {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-brand-gray-200 px-6 py-5 space-y-4">
+          <div className="border-t border-brand-gray-200 px-4 sm:px-6 py-4 sm:py-5 space-y-4 pb-safe">
             <div className="flex justify-between items-center">
               <span className="text-sm text-brand-gray-600">Subtotal</span>
               <span className="font-bold text-brand-black text-lg">

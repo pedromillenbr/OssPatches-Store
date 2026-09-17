@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useCartStore } from '@/store/cartStore';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +15,8 @@ export default function Header() {
   const [faixaOpen, setFaixaOpen] = useState(false);
   const [patchOpen, setPatchOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -28,17 +30,77 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  /*
+   * O header é fixo, então o conteúdo precisa de um respiro do mesmo tamanho.
+   * Antes esse valor era chutado no CSS (124px) e no celular sobrava/faltava
+   * espaço. Aqui ele é medido de verdade e publicado como variável --header-h,
+   * que o Layout e os links âncora usam.
+   */
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const publish = () => {
+      // Só mede com o header no tamanho "de repouso" (topo da página),
+      // senão o conteúdo pularia toda vez que a barra encolhe ao rolar.
+      if (window.scrollY > 8) return;
+      document.documentElement.style.setProperty(
+        '--header-h',
+        `${Math.round(el.getBoundingClientRect().height)}px`
+      );
+    };
+
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    window.addEventListener('orientationchange', publish);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', publish);
+    };
+  }, []);
+
+  // Menu mobile: fecha ao trocar de página e trava a rolagem do fundo.
+  useEffect(() => {
+    const close = () => setMenuOpen(false);
+    router.events.on('routeChangeStart', close);
+    return () => router.events.off('routeChangeStart', close);
+  }, [router.events]);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
   const count = totalItems();
 
   return (
     <header
+      ref={headerRef}
       className={`fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b transition-shadow duration-300 ${
         scrolled ? 'border-brand-gray-200 shadow-lg' : 'border-transparent shadow-sm'
       }`}
     >
       <AnnouncementBar />
-      <div className={`container-site transition-all duration-300 ${scrolled ? 'py-2' : 'py-4'}`}>
-        <div className="flex items-center justify-between gap-6">
+      <div
+        className={`container-site transition-all duration-300 ${
+          scrolled ? 'py-1.5 md:py-2' : 'py-2.5 md:py-4'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 md:gap-6">
+          {/* Menu mobile (só aparece no celular/tablet) */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="tap-target -ml-2 md:hidden text-brand-black"
+            aria-label="Abrir menu"
+            aria-expanded={menuOpen}
+          >
+            <MenuIcon />
+          </button>
+
           {/* Logo — wordmark oficial "OSS patches". priority: carrega primeiro (LCP). */}
           <Link
             href="/"
@@ -51,11 +113,13 @@ export default function Header() {
               width={1728}
               height={658}
               priority
-              className={`w-auto transition-all duration-300 ${scrolled ? 'h-11 md:h-12' : 'h-14 md:h-16'}`}
+              className={`w-auto transition-all duration-300 ${
+                scrolled ? 'h-9 md:h-12' : 'h-11 md:h-16'
+              }`}
             />
           </Link>
 
-          {/* Nav */}
+          {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-10 text-lg font-semibold">
             <div className="relative">
               <button
@@ -107,34 +171,18 @@ export default function Header() {
 
               {patchOpen && (
                 <div className="absolute left-0 mt-3 w-64 rounded-2xl border border-brand-gray-200 bg-white p-2 shadow-xl">
-                  <Link
-                    href="/produtos/patch-pequeno"
-                    className="block rounded-xl px-4 py-3 text-base text-brand-gray-600 hover:bg-brand-gray-50 hover:text-brand-black"
-                    onClick={() => setPatchOpen(false)}
-                  >
-                    Patch Pequeno
-                  </Link>
-                  <Link
-                    href="/produtos/patch-medio"
-                    className="mt-1 block rounded-xl px-4 py-3 text-base text-brand-gray-600 hover:bg-brand-gray-50 hover:text-brand-black"
-                    onClick={() => setPatchOpen(false)}
-                  >
-                    Patch Médio
-                  </Link>
-                  <Link
-                    href="/produtos/patch-grande"
-                    className="mt-1 block rounded-xl px-4 py-3 text-base text-brand-gray-600 hover:bg-brand-gray-50 hover:text-brand-black"
-                    onClick={() => setPatchOpen(false)}
-                  >
-                    Patch Grande
-                  </Link>
-                  <Link
-                    href="/produtos/kit-de-patches"
-                    className="mt-1 block rounded-xl px-4 py-3 text-base text-brand-gray-600 hover:bg-brand-gray-50 hover:text-brand-black"
-                    onClick={() => setPatchOpen(false)}
-                  >
-                    Kit de Patches
-                  </Link>
+                  {PATCH_LINKS.map((item, i) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`block rounded-xl px-4 py-3 text-base text-brand-gray-600 hover:bg-brand-gray-50 hover:text-brand-black ${
+                        i > 0 ? 'mt-1' : ''
+                      }`}
+                      onClick={() => setPatchOpen(false)}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
@@ -156,14 +204,14 @@ export default function Header() {
           </nav>
 
           {/* Conta + Carrinho */}
-          <div className="flex items-center gap-5">
-            {/* Conta */}
-            <div className="relative">
+          <div className="flex items-center gap-1 md:gap-4">
+            {/* Conta — no celular vive dentro do menu lateral */}
+            <div className="relative hidden md:block">
               <button
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
                 onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
-                className="flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
+                className="tap-target text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
                 aria-label="Minha conta"
                 aria-expanded={accountOpen}
               >
@@ -174,27 +222,16 @@ export default function Header() {
                 <div className="absolute right-0 mt-3 w-52 rounded-2xl border border-brand-gray-200 bg-white p-2 shadow-xl text-base font-medium">
                   {mounted && user ? (
                     <>
-                      <Link
-                        href="/minha-conta"
-                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
-                        onClick={() => setAccountOpen(false)}
-                      >
-                        Meus pedidos
-                      </Link>
-                      <Link
-                        href="/minha-conta/interesses"
-                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
-                        onClick={() => setAccountOpen(false)}
-                      >
-                        Interesses
-                      </Link>
-                      <Link
-                        href="/minha-conta/perfil"
-                        className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
-                        onClick={() => setAccountOpen(false)}
-                      >
-                        Meu perfil
-                      </Link>
+                      {ACCOUNT_LINKS.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block rounded-xl px-4 py-3 text-brand-gray-700 hover:bg-brand-gray-50 hover:text-brand-black"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
                       {profile?.is_admin && (
                         <Link
                           href="/admin"
@@ -240,12 +277,12 @@ export default function Header() {
             {/* Cart */}
             <button
               onClick={toggleCart}
-              className="relative flex items-center justify-center text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
-              aria-label="Abrir carrinho"
+              className="tap-target -mr-2 md:mr-0 relative text-brand-black hover:text-brand-gray-700 transition-transform duration-200 hover:scale-110"
+              aria-label={`Abrir carrinho${count > 0 ? ` (${count} itens)` : ''}`}
             >
               <CartIcon />
               {mounted && count > 0 && (
-                <span className="absolute -top-2 -right-2 bg-brand-black text-white text-[0.65rem] font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 bg-brand-black text-white text-[0.65rem] font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -253,7 +290,200 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      <MobileMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        isLogged={mounted && !!user}
+        isAdmin={!!profile?.is_admin}
+        onSignOut={async () => {
+          setMenuOpen(false);
+          await signOut();
+          router.push('/');
+        }}
+      />
     </header>
+  );
+}
+
+const PATCH_LINKS = [
+  { href: '/produtos/patch-pequeno', label: 'Patch Pequeno' },
+  { href: '/produtos/patch-medio', label: 'Patch Médio' },
+  { href: '/produtos/patch-grande', label: 'Patch Grande' },
+  { href: '/produtos/kit-de-patches', label: 'Kit de Patches' },
+];
+
+const ACCOUNT_LINKS = [
+  { href: '/minha-conta', label: 'Meus pedidos' },
+  { href: '/minha-conta/interesses', label: 'Interesses' },
+  { href: '/minha-conta/perfil', label: 'Meu perfil' },
+];
+
+interface MobileMenuProps {
+  open: boolean;
+  onClose: () => void;
+  isLogged: boolean;
+  isAdmin: boolean;
+  onSignOut: () => void;
+}
+
+/**
+ * Menu lateral do celular. Antes dessa tela o site simplesmente não tinha
+ * navegação abaixo de 768px: quem entrava pelo telefone só conseguia ver a
+ * home e o carrinho.
+ */
+function MobileMenu({ open, onClose, isLogged, isAdmin, onSignOut }: MobileMenuProps) {
+  return (
+    <div className="md:hidden" aria-hidden={!open}>
+      {/* Fundo escurecido */}
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+      />
+
+      {/* Painel */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-brand-gray-200 px-5 py-4">
+          <span className="text-sm font-bold uppercase tracking-widest text-brand-gray-400">
+            Menu
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="tap-target -mr-2 text-brand-black"
+            aria-label="Fechar menu"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-5 py-4">
+          <MenuGroup title="Faixas">
+            <MenuLink href="/#faixas-adulto" onClick={onClose}>
+              Faixas Adulto
+            </MenuLink>
+            <MenuLink href="/#faixas-infantil" onClick={onClose}>
+              Faixas Infantil
+            </MenuLink>
+          </MenuGroup>
+
+          <MenuGroup title="Patches">
+            {PATCH_LINKS.map((item) => (
+              <MenuLink key={item.href} href={item.href} onClick={onClose}>
+                {item.label}
+              </MenuLink>
+            ))}
+          </MenuGroup>
+
+          <MenuGroup title="A OssPatches">
+            <MenuLink href="/quem-somos" onClick={onClose}>
+              Quem Somos
+            </MenuLink>
+            <MenuLink href="/nossos-atletas" onClick={onClose}>
+              Nossos Atletas
+            </MenuLink>
+            <MenuLink href="/envios" onClick={onClose}>
+              Política de Envios
+            </MenuLink>
+          </MenuGroup>
+
+          <MenuGroup title="Minha conta">
+            {isLogged ? (
+              <>
+                {ACCOUNT_LINKS.map((item) => (
+                  <MenuLink key={item.href} href={item.href} onClick={onClose}>
+                    {item.label}
+                  </MenuLink>
+                ))}
+                {isAdmin && (
+                  <MenuLink href="/admin" onClick={onClose}>
+                    Painel Admin
+                  </MenuLink>
+                )}
+                <button
+                  onClick={onSignOut}
+                  className="flex min-h-[48px] w-full items-center rounded-xl px-3 text-left text-base text-brand-gray-500 active:bg-brand-gray-100"
+                >
+                  Sair
+                </button>
+              </>
+            ) : (
+              <>
+                <MenuLink href="/entrar" onClick={onClose}>
+                  Entrar
+                </MenuLink>
+                <MenuLink href="/criar-conta" onClick={onClose}>
+                  Criar conta
+                </MenuLink>
+              </>
+            )}
+          </MenuGroup>
+        </nav>
+
+        <div className="border-t border-brand-gray-200 px-5 py-4 pb-safe">
+          <Link
+            href="/#faixas-adulto"
+            onClick={onClose}
+            className="flex min-h-[52px] w-full items-center justify-center bg-brand-black text-base font-semibold text-white active:scale-[0.98]"
+          >
+            Ver faixas e patches
+          </Link>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function MenuGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-5">
+      <p className="mb-1 px-3 text-xs font-bold uppercase tracking-widest text-brand-gray-400">
+        {title}
+      </p>
+      <div className="flex flex-col">{children}</div>
+    </div>
+  );
+}
+
+function MenuLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex min-h-[48px] items-center rounded-xl px-3 text-base font-medium text-brand-gray-800 active:bg-brand-gray-100"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
   );
 }
 

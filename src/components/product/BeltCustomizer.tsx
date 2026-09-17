@@ -69,7 +69,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
       {/* Price */}
       <div>
         <div className="flex items-baseline gap-3">
-          <span className="text-4xl font-black text-brand-black">
+          <span className="text-3xl sm:text-4xl font-black text-brand-black">
             {formatPrice(price)}
           </span>
         </div>
@@ -131,7 +131,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
               key={s}
               onClick={() => setSize(s)}
               className={clsx(
-                'px-4 py-2 text-sm font-medium border transition-all duration-200 ease-out transform',
+                'px-4 py-2 min-h-[44px] min-w-[52px] text-sm font-medium border transition-all duration-200 ease-out transform',
                 size === s
                   ? 'bg-brand-black text-white border-brand-black shadow-sm'
                   : 'bg-white text-brand-black border-brand-gray-300 hover:border-brand-black hover:bg-brand-gray-50 hover:-translate-y-0.5 hover:shadow-sm'
@@ -156,7 +156,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
                 key={d}
                 onClick={() => setDegree(d)}
                 className={clsx(
-                  'w-10 h-10 text-sm font-medium border transition-all duration-200 ease-out',
+                  'w-12 h-12 text-sm font-medium border transition-all duration-200 ease-out',
                   degree === d
                     ? 'bg-brand-black text-white border-brand-black shadow-sm'
                     : 'bg-white text-brand-black border-brand-gray-300 hover:border-brand-black hover:bg-brand-gray-50'
@@ -228,7 +228,8 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            className="w-10 h-10 flex items-center justify-center border border-brand-gray-300 hover:border-brand-black transition-colors"
+            aria-label="Diminuir quantidade"
+            className="w-12 h-12 flex items-center justify-center border border-brand-gray-300 hover:border-brand-black transition-colors"
           >
             −
           </button>
@@ -236,12 +237,13 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-16 text-center border border-brand-gray-300 px-2 py-2 text-sm"
+            className="w-16 h-12 text-center border border-brand-gray-300 px-2 text-base"
             min="1"
           />
           <button
             onClick={() => setQuantity(quantity + 1)}
-            className="w-10 h-10 flex items-center justify-center border border-brand-gray-300 hover:border-brand-black transition-colors"
+            aria-label="Aumentar quantidade"
+            className="w-12 h-12 flex items-center justify-center border border-brand-gray-300 hover:border-brand-black transition-colors"
           >
             +
           </button>

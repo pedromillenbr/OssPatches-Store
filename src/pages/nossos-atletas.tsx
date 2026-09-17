@@ -28,7 +28,7 @@ export default function AthletesPage() {
           <AnimatedBackground />
           {/* Hero */}
           <section className="relative z-10 border-b border-brand-gray-200">
-            <div className="container-site py-20 lg:py-28">
+            <div className="container-site py-12 sm:py-20 lg:py-28">
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 bg-brand-gray-100 px-3 py-1.5 mb-6">
                   <span className="w-1.5 h-1.5 bg-brand-black rounded-full" />
@@ -37,7 +37,7 @@ export default function AthletesPage() {
                   </span>
                 </div>
 
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-brand-black leading-[1.05] mb-6">
+                <h1 className="text-[2.5rem] sm:text-6xl lg:text-7xl font-black text-brand-black leading-[1.05] mb-6">
                   Nossos Atletas
                 </h1>
 
@@ -54,7 +54,7 @@ export default function AthletesPage() {
           </section>
 
           {/* Athletes Grid */}
-          <section id="atletas" className="relative z-10 container-site py-20 lg:py-28">
+          <section id="atletas" className="relative z-10 container-site py-12 sm:py-20 lg:py-28">
             <div className="mb-16">
               <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
                 Equipe de elite
@@ -85,12 +85,12 @@ export default function AthletesPage() {
           </section>
 
           {/* CTA Section */}
-          <section className="relative z-10 container-site py-20 lg:py-28 border-t border-brand-gray-200">
+          <section className="relative z-10 container-site py-12 sm:py-20 lg:py-28 border-t border-brand-gray-200">
             <div className="text-center max-w-2xl mx-auto">
               <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
                 Comece hoje
               </p>
-              <h2 className="text-4xl sm:text-5xl font-black text-brand-black mb-6 leading-tight">
+              <h2 className="text-3xl sm:text-5xl font-black text-brand-black mb-6 leading-tight">
                 Você também pode ser campeão
               </h2>
               <p className="text-lg text-brand-gray-600 leading-relaxed mb-10">

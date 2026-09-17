@@ -17,7 +17,7 @@ export default function PoliticaEnvios() {
       <div className="container-site py-16 max-w-3xl">
         {/* Header */}
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-extrabold text-brand-black mb-4">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-black mb-4">
             Política de Envios
           </h1>
           <p className="text-brand-gray-500 text-lg">

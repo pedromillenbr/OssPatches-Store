@@ -175,8 +175,8 @@ export default function AboutPage() {
         <main className="min-h-screen bg-white relative">
           <AnimatedBackground />
           {/* 1. Nossa História */}
-          <section className="relative z-10 container-site py-20 lg:py-28 border-b border-brand-gray-200">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <section className="relative z-10 container-site py-12 sm:py-20 lg:py-28 border-b border-brand-gray-200">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
               {/* Text */}
               <div>
                 <div className="inline-flex items-center gap-2 bg-brand-gray-100 px-3 py-1.5 mb-6">
@@ -186,7 +186,7 @@ export default function AboutPage() {
                   </span>
                 </div>
 
-                <h1 className="text-5xl sm:text-6xl font-black text-brand-black mb-6 leading-tight">
+                <h1 className="text-[2.5rem] sm:text-6xl font-black text-brand-black mb-6 leading-tight">
                   De um tatame no Rio de Janeiro para o mundo
                 </h1>
 
@@ -220,13 +220,13 @@ export default function AboutPage() {
           </section>
 
           {/* 2. Scroll Timeline */}
-          <section className="relative z-10 py-20 lg:py-28 border-b border-brand-gray-200">
+          <section className="relative z-10 py-12 sm:py-20 lg:py-28 border-b border-brand-gray-200">
             {/* Header */}
             <div className="container-site mb-16">
               <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
                 Nossa trajetória
               </p>
-              <h2 className="text-4xl sm:text-5xl font-black text-brand-black mb-4 leading-tight">
+              <h2 className="text-3xl sm:text-5xl font-black text-brand-black mb-4 leading-tight">
                 Do Início até Hoje
               </h2>
               <p className="text-lg text-brand-gray-600 max-w-2xl leading-relaxed">
@@ -273,12 +273,12 @@ export default function AboutPage() {
           </div>
 
           {/* CTA Final */}
-          <section className="relative z-10 container-site py-20 lg:py-28 border-t border-brand-gray-200">
+          <section className="relative z-10 container-site py-12 sm:py-20 lg:py-28 border-t border-brand-gray-200">
             <div className="text-center max-w-2xl mx-auto">
               <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-4">
                 Comece hoje
               </p>
-              <h2 className="text-4xl sm:text-5xl font-black text-brand-black mb-6 leading-tight">
+              <h2 className="text-3xl sm:text-5xl font-black text-brand-black mb-6 leading-tight">
                 Faça parte dessa história
               </h2>
               <p className="text-lg text-brand-gray-600 leading-relaxed mb-10">

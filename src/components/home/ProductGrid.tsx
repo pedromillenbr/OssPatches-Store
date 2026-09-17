@@ -7,9 +7,9 @@ export default function ProductGrid() {
   const patches = getAllPatches();
 
   return (
-    <div className="container-site py-20">
+    <div className="container-site py-12 sm:py-20">
       {/* Adult Belts */}
-      <section id="faixas-adulto" className="mb-20">
+      <section id="faixas-adulto" className="mb-14 sm:mb-20">
         <SectionHeader
           label="Adulto"
           title="Faixas Adulto"
@@ -24,7 +24,7 @@ export default function ProductGrid() {
       </section>
 
       {/* Kids Belts */}
-      <section id="faixas-infantil" className="mb-20">
+      <section id="faixas-infantil" className="mb-14 sm:mb-20">
         <SectionHeader
           label="Infantil"
           title="Faixas Infantil"
@@ -62,14 +62,18 @@ interface SectionHeaderProps {
 
 function SectionHeader({ label, title, description }: SectionHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-4 mb-5 sm:mb-8">
       <div>
-        <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-2">
+        <p className="text-xs font-semibold tracking-widest uppercase text-brand-gray-400 mb-1 sm:mb-2">
           {label}
         </p>
         <h2 className="section-title">{title}</h2>
       </div>
-      <p className="text-sm text-brand-gray-500 max-w-xs leading-relaxed text-right hidden sm:block">
+      {/*
+        A descrição ficava escondida no celular (hidden sm:block). Agora ela
+        aparece sempre — alinhada à esquerda embaixo do título na tela pequena.
+      */}
+      <p className="text-sm text-brand-gray-500 sm:max-w-xs leading-relaxed sm:text-right">
         {description}
       </p>
     </div>

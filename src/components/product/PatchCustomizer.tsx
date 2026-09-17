@@ -16,6 +16,8 @@ export const FORMAT_IMAGE_INDEX: Record<PatchFormat, number> = {
   retangulo: 2,
   hexagonal: 3,
   quadrado: 4,
+  // Formato livre não tem foto própria: mantém a última imagem em destaque.
+  personalizado: 0,
 };
 
 interface PatchCustomizerProps {
@@ -23,7 +25,13 @@ interface PatchCustomizerProps {
   onFormatChange?: (imageIndex: number) => void;
 }
 
-type PatchFormat = 'quadrado' | 'retangulo' | 'triangulo' | 'circulo' | 'hexagonal';
+type PatchFormat =
+  | 'quadrado'
+  | 'retangulo'
+  | 'triangulo'
+  | 'circulo'
+  | 'hexagonal'
+  | 'personalizado';
 
 type KitPatchItem = {
   title: string;
@@ -42,7 +50,19 @@ const PATCH_FORMATS: { id: PatchFormat; label: string; icon: string }[] = [
   { id: 'retangulo', label: 'Retângulo', icon: '▭' },
   { id: 'hexagonal', label: 'Hexágono', icon: '⬡' },
   { id: 'quadrado', label: 'Quadrado', icon: '◻' },
+  { id: 'personalizado', label: 'Personalizado', icon: '⬚' },
 ];
+
+/** Número usado no botão de WhatsApp dos pedidos de formato livre. */
+const WHATSAPP_NUMBER = '5521982479922';
+
+function whatsappLink(productName: string) {
+  const text = encodeURIComponent(
+    `Olá! Quero um patch em formato personalizado (${productName}). ` +
+      `Posso enviar a arte e as medidas por aqui?`
+  );
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+}
 
 export default function PatchCustomizer({ product, onFormatChange }: PatchCustomizerProps) {
   const { addItem } = useCartStore();
@@ -111,6 +131,14 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
   });
 
   const totalPrice = product.basePrice * quantity;
+
+  /*
+   * Formato livre não passa pelo carrinho: arte, medidas e preço são
+   * combinados um a um no WhatsApp.
+   */
+  const hasCustomFormat = isKit
+    ? kitItems.some((item) => item.format === 'personalizado')
+    : format === 'personalizado';
 
   const handleKitItemChange = (index: number, field: keyof KitPatchItem, value: string | File | null) => {
     setKitItems((prev) =>
@@ -234,6 +262,8 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
       case 'triangulo':
       case 'hexagonal':
         return `Lado ${side}cm`;
+      case 'personalizado':
+        return 'A combinar no WhatsApp';
       default:
         return 'N/A';
     }
@@ -247,6 +277,11 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
   };
 
   const handleAdd = async () => {
+    if (hasCustomFormat) {
+      toast.error('Formato personalizado é fechado pelo WhatsApp.');
+      return;
+    }
+
     if (isKit) {
       for (const item of kitItems) {
         if (!item.artworkFile) {
@@ -366,7 +401,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
               <select
                 value={item.size}
                 onChange={(e) => handleKitItemChange(index, 'size', e.target.value)}
-                className="w-full border border-brand-gray-300 rounded px-3 py-2 text-sm"
+                className="select-field rounded"
               >
                 {product.sizes.map((size) => (
                   <option key={size} value={size}>
@@ -385,42 +420,51 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
                     type="button"
                     onClick={() => handleKitItemChange(index, 'format', fmt.id)}
                     className={clsx(
-                      'px-3 py-4 border-2 text-center transition-all flex flex-col items-center gap-2',
+                      'px-2 sm:px-3 py-4 min-h-[88px] border-2 text-center transition-all flex flex-col items-center justify-center gap-2',
                       item.format === fmt.id
                         ? 'border-brand-black bg-white'
                         : 'border-brand-gray-200 hover:border-brand-gray-400 bg-brand-gray-50'
                     )}
                   >
-                    <span className="text-3xl">{fmt.icon}</span>
-                    <span className="text-xs font-medium text-brand-black">
+                    <span className="text-2xl sm:text-3xl leading-none">{fmt.icon}</span>
+                    <span className="text-[0.7rem] sm:text-xs font-medium text-brand-black leading-tight">
                       {fmt.label}
                     </span>
                   </button>
                 ))}
               </div>
+              <p className="mt-2 text-xs text-brand-gray-600 leading-relaxed">
+                <strong className="text-brand-black">OBS:</strong> fazemos{' '}
+                <strong className="text-brand-black">qualquer formato</strong> — pedidos
+                com formato personalizado são fechados apenas pelo WhatsApp.
+              </p>
             </div>
 
-            <div>
-              <label className="label-field">Dimensões do {item.title.toLowerCase()} (em cm)</label>
-              <div className="space-y-3 bg-white rounded p-4 border border-brand-gray-200">
-                {renderDimensionFields(item.format, item)}
-              </div>
-            </div>
+            {item.format !== 'personalizado' && (
+              <>
+                <div>
+                  <label className="label-field">Dimensões do {item.title.toLowerCase()} (em cm)</label>
+                  <div className="space-y-3 bg-white rounded p-4 border border-brand-gray-200">
+                    {renderDimensionFields(item.format, item)}
+                  </div>
+                </div>
 
-            <div>
-              <label className="label-field">Arte do {item.title.toLowerCase()} <span className="text-red-500">*</span></label>
-              <input
-                type="file"
-                accept=".pdf,.png"
-                onChange={(event) => handleArtworkChange(index, event.target.files?.[0] ?? null)}
-                className="w-full border border-brand-gray-300 rounded px-3 py-3 text-sm"
-              />
-              {item.artworkFile && (
-                <p className="mt-2 text-xs text-brand-gray-500">
-                  Selecionado: {item.artworkFile.name}
-                </p>
-              )}
-            </div>
+                <div>
+                  <label className="label-field">Arte do {item.title.toLowerCase()} <span className="text-red-500">*</span></label>
+                  <input
+                    type="file"
+                    accept=".pdf,.png"
+                    onChange={(event) => handleArtworkChange(index, event.target.files?.[0] ?? null)}
+                    className="w-full border border-brand-gray-300 rounded px-3 py-3 text-base sm:text-sm"
+                  />
+                  {item.artworkFile && (
+                    <p className="mt-2 text-xs text-brand-gray-500">
+                      Selecionado: {item.artworkFile.name}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -470,21 +514,30 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
                     onFormatChange?.(FORMAT_IMAGE_INDEX[fmt.id]);
                   }}
                   className={clsx(
-                    'px-3 py-4 border-2 text-center transition-all flex flex-col items-center gap-2',
+                    'px-2 sm:px-3 py-4 min-h-[88px] border-2 text-center transition-all flex flex-col items-center justify-center gap-2',
                     format === fmt.id
                       ? 'border-brand-black bg-brand-gray-50'
                       : 'border-brand-gray-200 hover:border-brand-gray-400'
                   )}
                 >
-                  <span className="text-3xl">{fmt.icon}</span>
-                  <span className="text-xs font-medium text-brand-black">
+                  <span className="text-2xl sm:text-3xl leading-none">{fmt.icon}</span>
+                  <span className="text-[0.7rem] sm:text-xs font-medium text-brand-black leading-tight">
                     {fmt.label}
                   </span>
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-xs text-brand-gray-600 leading-relaxed">
+              <strong className="text-brand-black">OBS:</strong> fazemos{' '}
+              <strong className="text-brand-black">qualquer formato</strong> — pedidos
+              com formato personalizado são fechados apenas pelo WhatsApp.
+            </p>
           </div>
 
+          {hasCustomFormat ? (
+            <CustomFormatCallout productName={product.name} />
+          ) : (
+            <>
           {/* Dimensions - Dynamic based on format */}
           <div>
             <label className="label-field">Dimensões (em cm)</label>
@@ -499,14 +552,16 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-10 h-10 border border-brand-gray-300 flex items-center justify-center text-xl hover:border-brand-black transition-colors font-bold"
+                className="w-12 h-12 border border-brand-gray-300 flex items-center justify-center text-xl hover:border-brand-black transition-colors font-bold"
+                aria-label="Diminuir quantidade"
               >
                 −
               </button>
               <span className="w-12 text-center text-lg font-bold">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-10 h-10 border border-brand-gray-300 flex items-center justify-center text-xl hover:border-brand-black transition-colors font-bold"
+                className="w-12 h-12 border border-brand-gray-300 flex items-center justify-center text-xl hover:border-brand-black transition-colors font-bold"
+                aria-label="Aumentar quantidade"
               >
                 +
               </button>
@@ -592,19 +647,69 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
               </span>
             </div>
           </div>
+            </>
+          )}
         </>
       )}
 
+      {isKit && hasCustomFormat && <CustomFormatCallout productName={product.name} />}
+
       <DynamicMessage step="customizing" />
 
-      <Button
-        size="lg"
-        fullWidth
-        loading={adding}
-        onClick={handleAdd}
-      >
-        {isKit ? 'Adicionar Kit ao carrinho' : 'Adicionar ao carrinho'}
-      </Button>
+      {hasCustomFormat ? (
+        <a
+          href={whatsappLink(product.name)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 bg-[#25D366] px-8 text-base font-semibold text-white transition-all duration-200 active:scale-95"
+        >
+          <WhatsAppGlyph />
+          Falar no WhatsApp
+        </a>
+      ) : (
+        <Button
+          size="lg"
+          fullWidth
+          loading={adding}
+          onClick={handleAdd}
+        >
+          {isKit ? 'Adicionar Kit ao carrinho' : 'Adicionar ao carrinho'}
+        </Button>
+      )}
     </div>
+  );
+}
+
+/** Aviso mostrado quando o cliente escolhe o formato livre. */
+function CustomFormatCallout({ productName }: { productName: string }) {
+  return (
+    <div className="border-l-4 border-[#25D366] bg-green-50 px-4 py-4">
+      <p className="font-semibold text-brand-black">
+        Formato personalizado — fazemos qualquer formato
+      </p>
+      <p className="mt-1 text-sm leading-relaxed text-brand-gray-600">
+        Águia, escudo, logo do time, contorno da sua arte: a gente corta no
+        formato que você quiser. Como cada peça é orçada de acordo com o
+        recorte, esse pedido é fechado <strong>somente pelo WhatsApp</strong>.
+        Mande a arte e as medidas que respondemos com o valor.
+      </p>
+      <a
+        href={whatsappLink(productName)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-green-800 underline underline-offset-4"
+      >
+        Abrir conversa no WhatsApp →
+      </a>
+    </div>
+  );
+}
+
+function WhatsAppGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+      <path d="M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.945c0 2.096.549 4.14 1.595 5.945L0 24l6.305-1.654a11.93 11.93 0 005.71 1.454h.006c6.585 0 11.946-5.359 11.949-11.945a11.87 11.87 0 00-3.45-8.406zM12.02 21.785h-.005a9.93 9.93 0 01-5.06-1.386l-.363-.216-3.76.986 1.004-3.667-.236-.376a9.876 9.876 0 01-1.514-5.29c.002-5.475 4.458-9.93 9.939-9.93 2.654 0 5.148 1.035 7.023 2.913a9.868 9.868 0 012.907 7.026c-.003 5.476-4.458 9.94-9.935 9.94z" />
+    </svg>
   );
 }

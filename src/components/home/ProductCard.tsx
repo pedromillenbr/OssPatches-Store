@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Product, PatchProduct } from '@/types';
 import { formatPrice } from '@/services/products';
-import clsx from 'clsx';
+import { getPatchCardImage, KIT_MOSAIC } from '@/lib/patchImages';
 
 interface ProductCardProps {
   product: Product | PatchProduct;
@@ -28,7 +28,11 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
           {belt ? (
             <BeltPreview belt={belt} />
           ) : (
-            <PatchPreview image={patch?.images[0]} name={product.shortName} />
+            <PatchPreview
+              images={patch?.images ?? []}
+              slug={product.slug}
+              name={product.shortName}
+            />
           )}
 
           {/* Badge */}
@@ -39,11 +43,14 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Info */}
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-xs text-brand-gray-400 uppercase tracking-wider mb-1">
+        {/*
+          Info — no celular o card tem ~160px de largura, então nome e preço
+          ficam empilhados em vez de lado a lado (antes o preço espremia o nome).
+        */}
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+            <div className="min-w-0">
+              <p className="text-[0.65rem] sm:text-xs text-brand-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">
                 {product.category === 'belt-adult'
                   ? 'Faixa Adulto'
                   : product.category === 'belt-kids'
@@ -54,8 +61,8 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
                 {product.shortName}
               </h3>
             </div>
-            <div className="text-right shrink-0">
-              <p className="font-bold text-brand-black text-sm">
+            <div className="sm:text-right sm:shrink-0">
+              <p className="font-bold text-brand-black text-base sm:text-sm">
                 {formatPrice(product.basePrice)}
               </p>
               {product.customPrice > product.basePrice && (
@@ -66,14 +73,14 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
             </div>
           </div>
 
-          {/* Sizes preview */}
-          <div className="mt-3 flex items-center gap-1">
+          {/* Sizes preview — flex-wrap para não estourar a largura no celular */}
+          <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-1">
             {belt && (
               <>
                 {belt.sizes.slice(0, 5).map((s) => (
                   <span
                     key={s}
-                    className="text-xs border border-brand-gray-200 px-1.5 py-0.5 text-brand-gray-500"
+                    className="text-[0.65rem] sm:text-xs border border-brand-gray-200 px-1.5 py-0.5 text-brand-gray-500"
                   >
                     {s}
                   </span>
@@ -85,7 +92,7 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
                 {patch.sizes.map((s) => (
                   <span
                     key={s}
-                    className="text-xs border border-brand-gray-200 px-1.5 py-0.5 text-brand-gray-500"
+                    className="text-[0.65rem] sm:text-xs border border-brand-gray-200 px-1.5 py-0.5 text-brand-gray-500"
                   >
                     {s}
                   </span>
@@ -95,8 +102,8 @@ const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* CTA */}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs text-brand-gray-400">
+          <div className="mt-3 sm:mt-4 flex items-center justify-between gap-2">
+            <span className="hidden sm:inline text-xs text-brand-gray-400">
               Personalização disponível
             </span>
             <span className="text-xs font-semibold text-brand-black group-hover:underline">
@@ -166,7 +173,38 @@ function BeltPreview({ belt }: { belt: Product }) {
   );
 }
 
-function PatchPreview({ image, name }: { image?: string; name: string }) {
+function PatchPreview({
+  images,
+  slug,
+  name,
+}: {
+  images: string[];
+  slug: string;
+  name: string;
+}) {
+  if (images.length > 0 && slug === 'kit-de-patches') {
+    return (
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-brand-gray-200">
+        {KIT_MOSAIC.map((idx, i) => {
+          const src = images[idx] ?? images[0];
+          return (
+            <div key={i} className="relative overflow-hidden bg-brand-gray-50">
+              <Image
+                src={src}
+                alt={i === 0 ? `${name} — formatos disponíveis` : ''}
+                fill
+                sizes="(max-width: 640px) 25vw, (max-width: 1024px) 17vw, 13vw"
+                className="object-cover"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const image = getPatchCardImage(slug, images);
+
   if (image) {
     return (
       <Image

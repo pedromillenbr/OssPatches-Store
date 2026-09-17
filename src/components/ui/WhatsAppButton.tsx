@@ -33,10 +33,21 @@ export default function WhatsAppButton() {
   }, []);
 
   return (
-    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
+    /*
+     * No celular o botão fica menor e sobe automaticamente quando a barra de
+     * compra da página de produto aparece (--mobile-bar-h), em vez de ficar
+     * um em cima do outro. bottom-safe respeita a barra de gestos do iPhone.
+     */
+    <div
+      className="fixed right-4 sm:right-6 z-30 flex flex-col items-end gap-2 sm:gap-3 transition-[bottom] duration-300"
+      style={{
+        bottom:
+          'calc(env(safe-area-inset-bottom, 0px) + var(--mobile-bar-h, 0px) + 1rem)',
+      }}
+    >
       {showMessage && (
         <div
-          className="max-w-[220px] rounded-full bg-white/95 border border-green-200 px-4 py-2 text-xs font-semibold text-brand-black shadow-lg animate-fade-in"
+          className="hidden sm:block max-w-[220px] rounded-full bg-white/95 border border-green-200 px-4 py-2 text-xs font-semibold text-brand-black shadow-lg animate-fade-in"
           aria-live="polite"
         >
           Está com dúvida? Fale conosco!
@@ -47,14 +58,14 @@ export default function WhatsAppButton() {
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-200 hover:scale-110 active:scale-95"
+        className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-xl transition-all duration-200 hover:scale-110 active:scale-95"
         title="Chat no WhatsApp"
         aria-label="Abrir WhatsApp"
       >
         <svg
           viewBox="0 0 64 64"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-16 h-16"
+          className="w-full h-full"
         >
           {/* Outer white circle with shadow */}
           <circle cx="32" cy="32" r="31" fill="white" />

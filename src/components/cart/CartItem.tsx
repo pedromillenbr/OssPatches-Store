@@ -64,12 +64,13 @@ const CartItem = memo(function CartItem({ item }: CartItemProps) {
           ))}
         </div>
 
-        {/* Quantity + remove */}
-        <div className="flex items-center gap-3 mt-3">
+        {/* Quantity + remove — botões de 40px para acertar com o dedo */}
+        <div className="flex items-center gap-2 mt-3">
           <div className="flex items-center border border-brand-gray-200">
             <button
               onClick={() => updateQuantity(item.cartId, item.quantity - 1)}
-              className="w-7 h-7 flex items-center justify-center text-sm hover:bg-brand-gray-100 transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-base hover:bg-brand-gray-100 transition-colors"
+              aria-label="Diminuir quantidade"
             >
               −
             </button>
@@ -78,14 +79,15 @@ const CartItem = memo(function CartItem({ item }: CartItemProps) {
             </span>
             <button
               onClick={() => updateQuantity(item.cartId, item.quantity + 1)}
-              className="w-7 h-7 flex items-center justify-center text-sm hover:bg-brand-gray-100 transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-base hover:bg-brand-gray-100 transition-colors"
+              aria-label="Aumentar quantidade"
             >
               +
             </button>
           </div>
           <button
             onClick={() => removeItem(item.cartId)}
-            className="text-xs text-brand-gray-400 hover:text-red-500 transition-colors"
+            className="min-h-[40px] px-2 text-xs text-brand-gray-400 hover:text-red-500 transition-colors"
           >
             Remover
           </button>

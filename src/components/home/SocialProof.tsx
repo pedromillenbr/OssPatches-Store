@@ -49,7 +49,22 @@ const AUTO_INTERVAL = 3500;
 export default function SocialProof() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  /*
+   * O carrossel 3D joga os cards vizinhos 280px e 480px para os lados. Numa
+   * tela de 375px isso vira uma pilha ilegível, então no celular mostramos
+   * um card por vez, do tamanho da tela, navegando por arrasto.
+   */
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
 
   const next = useCallback(() => {
     setActive((prev) => (prev + 1) % TOTAL);
@@ -81,6 +96,12 @@ export default function SocialProof() {
     const absOffset = Math.abs(offset);
     const sign = offset < 0 ? -1 : offset > 0 ? 1 : 0;
 
+    if (isMobile) {
+      return absOffset === 0
+        ? { opacity: 1, zIndex: 10, transition: 'opacity 0.4s ease' }
+        : { display: 'none' };
+    }
+
     if (absOffset > 2) {
       return { display: 'none' };
     }
@@ -101,39 +122,53 @@ export default function SocialProof() {
   }
 
   return (
-    <section className="py-20 sm:py-28 bg-white border-t border-b border-brand-gray-200 overflow-hidden">
+    <section className="py-12 sm:py-28 bg-white border-t border-b border-brand-gray-200 overflow-hidden">
       <div className="container-site">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-black text-brand-black mb-6">
+        <div className="text-center mb-8 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-black text-brand-black">
             O que nossos clientes dizem
           </h2>
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 mb-20">
+        <div className="grid grid-cols-3 gap-3 sm:gap-12 mb-10 sm:mb-20">
           <div className="text-center">
-            <p className="text-4xl sm:text-5xl font-black text-brand-black mb-2">+12.000</p>
-            <p className="text-sm text-brand-gray-600">JiuJiteiros felizes</p>
+            <p className="text-xl sm:text-5xl font-black text-brand-black mb-1 sm:mb-2">+12.000</p>
+            <p className="text-xs sm:text-sm leading-snug text-brand-gray-600">JiuJiteiros felizes</p>
           </div>
           <div className="text-center">
-            <div className="text-4xl sm:text-5xl font-black text-brand-black mb-2 flex items-center justify-center gap-2">
+            <div className="text-xl sm:text-5xl font-black text-brand-black mb-1 sm:mb-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
               5 <StarRating rating={5} />
             </div>
-            <p className="text-sm text-brand-gray-600">Avaliações verificadas</p>
+            <p className="text-xs sm:text-sm leading-snug text-brand-gray-600">Avaliações verificadas</p>
           </div>
           <div className="text-center">
-            <p className="text-4xl sm:text-5xl font-black text-brand-black mb-2">Alto Padrão</p>
-            <p className="text-sm text-brand-gray-600">Do design ao tatame</p>
+            <p className="text-xl sm:text-5xl font-black text-brand-black mb-1 sm:mb-2">Alto Padrão</p>
+            <p className="text-xs sm:text-sm leading-snug text-brand-gray-600">Do design ao tatame</p>
           </div>
         </div>
 
-        {/* 3D Carousel */}
+        {/* Carrossel — 3D no desktop, um card por vez (com arrasto) no celular */}
         <div
-          className="relative mx-auto"
-          style={{ height: 280, maxWidth: 1100, perspective: '1200px' }}
+          className="relative mx-auto h-[260px] sm:h-[280px]"
+          style={{ maxWidth: 1100, perspective: '1200px' }}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+            setPaused(true);
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStartX.current;
+            touchStartX.current = null;
+            setPaused(false);
+            if (start === null) return;
+            const delta = e.changedTouches[0].clientX - start;
+            if (Math.abs(delta) < 40) return;
+            if (delta < 0) next();
+            else prev();
+          }}
         >
           {/* Cards */}
           <div className="absolute inset-0 flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
@@ -141,11 +176,8 @@ export default function SocialProof() {
               <div
                 key={review.id}
                 onClick={() => goTo(idx)}
-                className="absolute cursor-pointer"
-                style={{
-                  width: 320,
-                  ...getCardStyle(idx),
-                }}
+                className="absolute cursor-pointer w-[min(320px,calc(100vw-2.5rem))] sm:w-[320px]"
+                style={getCardStyle(idx)}
               >
                 <div
                   className="bg-white border border-brand-gray-200 rounded-xl px-6 py-5 shadow-md select-none"
@@ -174,10 +206,10 @@ export default function SocialProof() {
             ))}
           </div>
 
-          {/* Nav arrows */}
+          {/* Nav arrows — no celular ficariam por cima do card; lá vale o arrasto */}
           <button
             onClick={prev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-brand-gray-200 rounded-full shadow-sm hover:shadow-md hover:border-brand-gray-400 transition-all"
+            className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center bg-white border border-brand-gray-200 rounded-full shadow-sm hover:shadow-md hover:border-brand-gray-400 transition-all"
             aria-label="Anterior"
           >
             <svg className="w-4 h-4 text-brand-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +218,7 @@ export default function SocialProof() {
           </button>
           <button
             onClick={next}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-brand-gray-200 rounded-full shadow-sm hover:shadow-md hover:border-brand-gray-400 transition-all"
+            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center bg-white border border-brand-gray-200 rounded-full shadow-sm hover:shadow-md hover:border-brand-gray-400 transition-all"
             aria-label="Próximo"
           >
             <svg className="w-4 h-4 text-brand-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,20 +228,25 @@ export default function SocialProof() {
         </div>
 
         {/* Dots */}
-        <div className="flex items-center justify-center gap-2 mt-8">
+        <div className="flex flex-wrap items-center justify-center gap-x-1 mt-6 sm:mt-8">
           {ALL_REVIEWS.map((_, idx) => (
             <button
               key={idx}
               onClick={() => goTo(idx)}
-              className="transition-all duration-300"
-              style={{
-                width: idx === active ? 24 : 8,
-                height: 8,
-                borderRadius: 99,
-                backgroundColor: idx === active ? '#171717' : '#D4D4D4',
-              }}
+              className="flex h-9 items-center px-1"
               aria-label={`Ir para avaliação ${idx + 1}`}
-            />
+              aria-current={idx === active}
+            >
+              <span
+                className="block transition-all duration-300"
+                style={{
+                  width: idx === active ? 24 : 8,
+                  height: 8,
+                  borderRadius: 99,
+                  backgroundColor: idx === active ? '#171717' : '#D4D4D4',
+                }}
+              />
+            </button>
           ))}
         </div>
       </div>

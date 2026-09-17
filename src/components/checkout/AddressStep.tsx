@@ -225,7 +225,7 @@ export default function AddressStep() {
         )}
       </div>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row">
         <Button
           type="button"
           variant="secondary"

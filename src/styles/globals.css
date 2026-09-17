@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Altura do header fixo. Estes valores são só o "chute inicial" usado no
+   * primeiro quadro; o Header mede a altura real e sobrescreve via JS.
+   */
+  :root {
+    --header-h: 100px;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --header-h: 134px;
+    }
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -10,12 +24,34 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Links âncora (#faixas-adulto) não ficam escondidos atrás do header fixo. */
+    scroll-padding-top: var(--header-h, 124px);
+    /* Nada de rolagem lateral no celular, mesmo se algum bloco vazar. */
+    overflow-x: clip;
   }
 
   body {
     @apply bg-white text-brand-black font-sans;
     font-size: 16px;
     line-height: 1.6;
+    overflow-x: clip;
+    /* Evita o "flash cinza" ao tocar em links/botões no Android. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Imagens e vídeos nunca estouram a largura da tela. */
+  img, video, svg, canvas {
+    max-width: 100%;
+  }
+
+  /* Quem pediu menos animação no sistema recebe menos animação. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -38,32 +74,41 @@
   }
 
   .btn-primary {
-    @apply bg-brand-black text-white font-semibold px-6 py-3
+    @apply bg-brand-black text-white font-semibold px-6 py-3 min-h-[44px]
            transition-all duration-200 hover:bg-brand-gray-800
            active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply border border-brand-black text-brand-black font-semibold px-6 py-3
+    @apply border border-brand-black text-brand-black font-semibold px-6 py-3 min-h-[44px]
            transition-all duration-200 hover:bg-brand-black hover:text-white
            active:scale-95 disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply text-brand-black font-medium px-4 py-2
+    @apply text-brand-black font-medium px-4 py-2 min-h-[44px]
            transition-colors duration-200 hover:bg-brand-gray-100;
   }
 
+  /*
+   * text-base (16px) no celular é OBRIGATÓRIO: abaixo disso o Safari do iPhone
+   * dá zoom sozinho ao tocar no campo e desalinha o checkout inteiro.
+   */
   .input-field {
-    @apply w-full border border-brand-gray-300 px-4 py-3 text-sm
+    @apply w-full border border-brand-gray-300 px-4 py-3 min-h-[48px] text-base sm:text-sm
            focus:border-brand-black focus:shadow-md focus:ring-1 focus:ring-brand-gray-200
            transition-all duration-150 placeholder:text-brand-gray-400 bg-white;
   }
 
   .select-field {
-    @apply w-full border border-brand-gray-300 px-4 py-3 text-sm
+    @apply w-full border border-brand-gray-300 px-4 py-3 min-h-[48px] text-base sm:text-sm
            focus:border-brand-black focus:shadow-md focus:ring-1 focus:ring-brand-gray-200
            transition-all duration-150 bg-white appearance-none cursor-pointer;
+  }
+
+  /* Alvo de toque mínimo de 44px — recomendação da Apple e do Google. */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
   }
 
   .label-field {
@@ -100,6 +145,26 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Respeita a barra de gestos do iPhone em elementos colados no rodapé. */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  }
+
+  .bottom-safe {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  /* Carrossel horizontal com "encaixe" no dedo (usado nas faixas do topo). */
+  .snap-row {
+    @apply flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-left: 1rem;
+  }
+
+  .snap-row > * {
+    @apply snap-start shrink-0;
   }
 }
 

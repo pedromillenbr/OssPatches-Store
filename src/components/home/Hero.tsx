@@ -18,29 +18,29 @@ export default function Hero() {
       />
 
       <div className="container-site relative">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center py-20 lg:py-28">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center py-10 sm:py-16 lg:py-28">
 
           {/* TEXTO */}
           <div className="animate-fade-in">
-            <div className="inline-flex items-center gap-2 bg-brand-gray-100 px-3 py-1.5 mb-6">
-              
-              
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-brand-black leading-[1.05] mb-6">
+            <h1 className="text-[2.5rem] leading-[1.05] sm:text-6xl lg:text-7xl font-black text-brand-black mb-5 sm:mb-6">
               Faixas <br />
               e Patches <br />
               <span className="text-brand-gray-400">Premium</span>
             </h1>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Link href="#faixas-adulto">
+            <p className="text-base text-brand-gray-600 mb-6 max-w-md lg:hidden">
+              Produção 100% própria, padrão competição IBJJF e personalização com
+              nome bordado.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8">
+              <Link href="#faixas-adulto" className="sm:w-auto">
                 <Button size="lg" fullWidth className="sm:w-auto">
                   Comprar agora
                 </Button>
               </Link>
 
-              <Link href="#patches">
+              <Link href="#patches" className="sm:w-auto">
                 <Button variant="secondary" size="lg" fullWidth className="sm:w-auto">
                   Ver patches
                 </Button>
@@ -50,9 +50,40 @@ export default function Hero() {
             <DynamicMessage step="browsing" />
           </div>
 
-          {/* BELTS */}
+          {/* BELTS — no desktop, a coluna interativa */}
           <div className="hidden lg:flex items-center justify-center">
             <BeltDisplay />
+          </div>
+        </div>
+
+        {/*
+          No celular a coluna de faixas ficava escondida (hidden lg:flex) e o
+          visitante perdia o atalho para o catálogo inteiro. Aqui ela vira um
+          carrossel horizontal que cabe na tela.
+        */}
+        <div className="lg:hidden pb-10 sm:pb-14">
+          <p className="mb-3 text-sm font-bold uppercase tracking-widest text-brand-gray-400">
+            Qual a sua faixa?
+          </p>
+          <div className="snap-row -mx-4 px-4 sm:-mx-6 sm:px-6 pb-2">
+            {BELTS.map((belt) => (
+              <Link
+                key={belt.label}
+                href={`/produtos/${belt.slug}`}
+                className="w-[104px] border border-brand-gray-200 bg-white p-3 active:scale-95 transition-transform"
+              >
+                <div
+                  className="h-9 w-full rounded-sm"
+                  style={{
+                    backgroundColor: belt.color,
+                    border: belt.border ? `1px solid ${belt.border}` : 'none',
+                  }}
+                />
+                <span className="mt-2 block text-center text-sm font-semibold text-brand-black">
+                  {belt.label}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -60,47 +91,34 @@ export default function Hero() {
   );
 }
 
-function StatCard({ label, highlight }: { label: string; highlight: string }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="text-2xl sm:text-3xl font-black text-brand-black">
-        {highlight}
-      </div>
-      <p className="text-xs sm:text-sm text-brand-gray-600">
-        {label}
-      </p>
-    </div>
-  );
-}
+const BELTS = [
+  { color: '#F5F5F5', border: '#D4D4D4', label: 'Branca', slug: 'faixa-branca-adulto' },
+
+  { color: '#9CA3AF', label: 'Cinza', slug: 'faixa-cinza-infantil' },
+  { color: '#FFD700', label: 'Amarela', slug: 'faixa-amarela-infantil' },
+  { color: '#F97316', label: 'Laranja', slug: 'faixa-laranja-infantil' },
+  { color: '#22C55E', label: 'Verde', slug: 'faixa-verde-infantil' },
+
+  { color: '#1E40AF', label: 'Azul', slug: 'faixa-azul-adulto' },
+  { color: '#7C3AED', label: 'Roxa', slug: 'faixa-roxa-adulto' },
+  { color: '#78350F', label: 'Marrom', slug: 'faixa-marrom-adulto' },
+  { color: '#171717', label: 'Preta', slug: 'faixa-preta-adulto' },
+  { color: '#DC2626', label: 'Vermelha', slug: 'faixa-vermelha-adulto' },
+] as { color: string; border?: string; label: string; slug: string }[];
 
 function BeltDisplay() {
   const [active, setActive] = useState<string | null>(null);
 
-  const belts = [
-    { color: '#F5F5F5', border: '#D4D4D4', label: 'Branca', slug: 'faixa-branca-adulto' },
-
-    { color: '#9CA3AF', label: 'Cinza', slug: 'faixa-cinza-infantil' },
-    { color: '#FFD700', label: 'Amarela', slug: 'faixa-amarela-infantil' },
-    { color: '#F97316', label: 'Laranja', slug: 'faixa-laranja-infantil' },
-    { color: '#22C55E', label: 'Verde', slug: 'faixa-verde-infantil' },
-
-    { color: '#1E40AF', label: 'Azul', slug: 'faixa-azul-adulto' },
-    { color: '#7C3AED', label: 'Roxa', slug: 'faixa-roxa-adulto' },
-    { color: '#78350F', label: 'Marrom', slug: 'faixa-marrom-adulto' },
-    { color: '#171717', label: 'Preta', slug: 'faixa-preta-adulto' },
-    { color: '#DC2626', label: 'Vermelha', slug: 'faixa-vermelha-adulto' },
-  ];
-
   return (
     <div className="relative w-full max-w-sm">
 
-      {/* TÍTULO */}
-      <h1 className="text-2xl sm:text-3xl font-bold text-brand-black mb-8 text-center">
+      {/* TÍTULO — h2, porque o h1 da página é o título principal do topo */}
+      <h2 className="text-2xl sm:text-3xl font-bold text-brand-black mb-8 text-center">
         Qual a sua faixa?
-      </h1>
+      </h2>
 
       <div className="space-y-8">
-        {belts.map((belt, i) => {
+        {BELTS.map((belt, i) => {
           const isActive = active === belt.label;
 
           return (

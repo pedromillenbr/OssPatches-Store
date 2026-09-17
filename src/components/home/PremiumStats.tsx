@@ -60,19 +60,20 @@ function CountUp({ end, label, suffix = '', prefix = '+', duration = 3000 }: Cou
 
   return (
     <div ref={ref} className="text-center sm:text-left">
-      <p className="text-5xl sm:text-6xl font-black text-brand-black mb-2">
+      <p className="text-2xl sm:text-6xl font-black text-brand-black mb-1 sm:mb-2 tabular-nums">
         {prefix}{count.toLocaleString()}{suffix}
       </p>
-      <p className="text-sm text-brand-gray-600">{label}</p>
+      <p className="text-xs sm:text-sm leading-snug text-brand-gray-600">{label}</p>
     </div>
   );
 }
 
 export default function PremiumStats() {
   return (
-    <section className="py-16 sm:py-20 bg-brand-gray-50 border-t border-b border-brand-gray-200">
+    <section className="py-8 sm:py-20 bg-brand-gray-50 border-t border-b border-brand-gray-200">
       <div className="container-site">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+        {/* 3 colunas compactas no celular em vez de 3 blocos empilhados gigantes */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-12">
 
           <CountUp 
             end={100000} 
