@@ -68,9 +68,19 @@ export default function AthletesPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {athletes.athletes.map((athlete) => (
-                <AthleteCard key={athlete.id} {...athlete} />
-              ))}
+              {athletes.athletes
+                .filter((athlete) => !('hidden' in athlete && athlete.hidden))
+                .map(({ id, name, title, category, image, bio, achievements }) => (
+                  <AthleteCard
+                    key={id}
+                    name={name}
+                    title={title}
+                    category={category}
+                    image={image}
+                    bio={bio}
+                    achievements={achievements}
+                  />
+                ))}
             </div>
           </section>
 

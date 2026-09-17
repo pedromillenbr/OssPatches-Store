@@ -43,6 +43,7 @@
 
 {
       "id": "athlete-3",
+      "hidden": true,
       "name": "Jasmine Ferrari",
       "title": "2x Campeã Brasileira CBJJ",
       "category": "Peso Meio Pesado",
@@ -57,6 +58,7 @@
 
     {
       "id": "athlete-5",
+      "hidden": true,
       "name": "Lucas Oliveira",
       "title": "Campeão Europeu",
       "category": "Médio",
@@ -70,6 +72,7 @@
     },
     {
       "id": "athlete-6",
+      "hidden": true,
       "name": "Beatriz Lima",
       "title": "Mestre de Seminários",
       "category": "Todas as categorias",

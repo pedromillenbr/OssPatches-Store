@@ -1,9 +1,48 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import reviews from '@/data/reviews.json';
+import Image from 'next/image';
 import StarRating from '@/components/ui/StarRating';
 
-const ALL_REVIEWS = reviews.reviews;
+interface Review {
+  id: number;
+  name: string;
+  title: string;
+  rating: number;
+  text: string;
+  date: string;
+  photo?: string;
+  // Ponto do rosto na foto (em %) e quanto aproximar dentro da bolinha
+  photoFocus?: { x: number; y: number; zoom: number };
+  hidden?: boolean;
+}
+
+const AVATAR_PX = 44;
+
+function ReviewAvatar({ src, name, focus }: { src: string; name: string; focus?: Review['photoFocus'] }) {
+  const { x, y, zoom } = focus ?? { x: 50, y: 50, zoom: 1 };
+  return (
+    <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 ring-2 ring-white shadow-sm bg-brand-gray-100">
+      <Image
+        src={encodeURI(src)}
+        alt={`Foto de ${name}`}
+        fill
+        sizes={`${Math.round(AVATAR_PX * zoom)}px`}
+        draggable={false}
+        className="object-cover"
+        style={{
+          objectPosition: `${x}% ${y}%`,
+          transformOrigin: `${x}% ${y}%`,
+          // leva o rosto para o centro da bolinha e aproxima
+          transform: `translate(${50 - x}%, ${50 - y}%) scale(${zoom})`,
+        }}
+      />
+    </div>
+  );
+}
+
+// Reviews marcadas "hidden" (ou sem texto) ficam fora do carrossel
+const ALL_REVIEWS = (reviews.reviews as Review[]).filter((r) => !r.hidden && r.text.trim());
 const TOTAL = ALL_REVIEWS.length;
 const AUTO_INTERVAL = 3500;
 
@@ -117,10 +156,15 @@ export default function SocialProof() {
                         : '0 4px 20px -4px rgba(0,0,0,0.08)',
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-bold text-sm text-brand-black">{review.name}</p>
-                      <p className="text-xs text-brand-gray-500 mt-0.5">{review.title}</p>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {review.photo && (
+                        <ReviewAvatar src={review.photo} name={review.name} focus={review.photoFocus} />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-brand-black truncate">{review.name}</p>
+                        <p className="text-xs text-brand-gray-500 mt-0.5">{review.title}</p>
+                      </div>
                     </div>
                     <StarRating rating={review.rating} />
                   </div>

@@ -9,7 +9,7 @@ import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Emoji from '@/components/ui/Emoji';
 import { CONFIG } from '@/config';
 
-function TimelineImage({ src, alt, year }: { src: string; alt: string; year: string }) {
+function TimelineImage({ src, alt, year, position }: { src: string; alt: string; year: string; position?: string }) {
   const [error, setError] = useState(false);
   if (error) {
     return (
@@ -26,6 +26,7 @@ function TimelineImage({ src, alt, year }: { src: string; alt: string; year: str
         fill
         sizes="(max-width: 1024px) 100vw, 50vw"
         className="object-cover"
+        style={position ? { objectPosition: position } : undefined}
         loading="lazy"
         onError={() => setError(true)}
       />
@@ -33,11 +34,41 @@ function TimelineImage({ src, alt, year }: { src: string; alt: string; year: str
   );
 }
 
+type TimelinePhoto = { src: string; alt: string };
+
+// Duas fotos: a principal ocupa o quadro e a segunda entra como detalhe sobreposto no canto
+function TimelineImagePair({ main, detail, year, isLeft }: { main: TimelinePhoto; detail: TimelinePhoto; year: string; isLeft: boolean }) {
+  const [detailError, setDetailError] = useState(false);
+  return (
+    <div className="relative pb-10 sm:pb-12">
+      {/* foco à direita: no celular o quadro corta as laterais e o Jefferson fica na ponta direita da foto */}
+      <TimelineImage src={encodeURI(main.src)} alt={main.alt} year={year} position="72% 45%" />
+      {!detailError && (
+        <div
+          className={`absolute bottom-0 w-[46%] aspect-[3/2] rounded-xl overflow-hidden bg-brand-gray-100 ring-4 ring-white shadow-xl ${
+            isLeft ? '-left-2 sm:-left-5' : '-right-2 sm:-right-5'
+          }`}
+        >
+          <Image
+            src={encodeURI(detail.src)}
+            alt={detail.alt}
+            fill
+            sizes="(max-width: 1024px) 46vw, 23vw"
+            className="object-cover"
+            loading="lazy"
+            onError={() => setDetailError(true)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TimelineEntry({
-  year, title, description, icon, image, index,
+  year, title, description, icon, image, secondImage, index,
 }: {
   year: string; title: string; description: string; icon: string;
-  image: { src: string; alt: string }; index: number;
+  image: TimelinePhoto; secondImage?: TimelinePhoto; index: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -81,7 +112,11 @@ function TimelineEntry({
 
       {/* Image */}
       <div className={isLeft ? 'lg:order-2' : 'lg:order-1'}>
-        <TimelineImage src={image.src} alt={image.alt} year={year} />
+        {secondImage ? (
+          <TimelineImagePair main={image} detail={secondImage} year={year} isLeft={isLeft} />
+        ) : (
+          <TimelineImage src={image.src} alt={image.alt} year={year} />
+        )}
       </div>
     </div>
   );
@@ -91,8 +126,8 @@ export default function AboutPage() {
   const galleryImages = [
     { id: 1, src: '/images/about/historia-1.jpg', alt: 'História OssPatches 2015' },
     { id: 2, src: '/images/about/historia-2.jpeg', alt: 'História OssPatches 2017' },
-    { id: 3, src: '/images/about/historia-3.jpg', alt: 'História OssPatches 2019' },
-    { id: 4, src: '/images/about/historia-4.jpg', alt: 'História OssPatches 2023' },
+    { id: 3, src: '/images/about/jeff oab.jpeg', alt: 'Equipe OssPatches no plenário da OAB-RJ durante o reconhecimento da campanha contra o assédio nos tatames' },
+    { id: 4, src: '/images/about/patches oab.jpeg', alt: 'Patches da campanha "Contra o assédio nos tatames"' },
   ];
 
   const milestones = [
@@ -105,24 +140,18 @@ export default function AboutPage() {
     },
     {
       year: '2017',
-      title: 'Primeiro Crescimento',
+      title: 'Momento de Expansão',
       description: 'Expandimos nossa produção e começamos a estar presentes nos principais campeonatos do Brasil. Sempre com nossas barracas divulgando a excelente qualidade do nosso material.',
       icon: '🚀',
       image: galleryImages[1]
     },
     {
-      year: '2019',
-      title: 'Alcance Global',
-      description: 'Primeira exportação internacional. OssPatches passa a ser conhecida por atletas em países da Europa e Ásia.',
-      icon: '🌍',
-      image: galleryImages[2]
-    },
-    {
-      year: '2023',
-      title: 'Consolidação',
-      description: 'Mais de 12.000 atletas em 6 continentes confiam em OssPatches para suas faixas e patches premium.',
-      icon: '🏆',
-      image: galleryImages[3]
+      year: '2026',
+      title: 'Visibilidade Nacional',
+      description: 'Nossa campanha "Contra o assédio nos tatames" ganhou reconhecimento público da OAB-RJ. Levamos ao plenário da Ordem a mensagem de que o tatame precisa ser um lugar seguro para todos, e transformamos essa causa em patches usados por atletas e academias.',
+      icon: '⚖️',
+      image: galleryImages[2],
+      secondImage: galleryImages[3],
     },
   ];
 
@@ -228,6 +257,7 @@ export default function AboutPage() {
                       description={milestone.description}
                       icon={milestone.icon}
                       image={milestone.image}
+                      secondImage={'secondImage' in milestone ? milestone.secondImage : undefined}
                     />
                   </div>
                 ))}
