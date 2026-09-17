@@ -1,8 +1,13 @@
 import productsData from '@/data/products.json';
 import { Product, PatchProduct } from '@/types';
 
-const allBelts = productsData.belts as Product[];
-const allPatches = productsData.patches as PatchProduct[];
+// Produtos com "hidden": true no products.json somem da loja inteira
+// (vitrine, páginas de produto, sitemap). Os dados continuam no arquivo —
+// basta remover a marca para o produto voltar.
+const isVisible = (p: unknown) => !(p as { hidden?: boolean }).hidden;
+
+const allBelts = (productsData.belts as Product[]).filter(isVisible);
+const allPatches = (productsData.patches as PatchProduct[]).filter(isVisible);
 
 export function getAllProducts(): (Product | PatchProduct)[] {
   return [...allBelts, ...allPatches];

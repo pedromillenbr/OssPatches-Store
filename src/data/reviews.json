@@ -89,6 +89,16 @@
       "rating": 5,
       "text": "Recebi meu grau com a faixa da OssPatches e fez toda a diferença. Tecido resistente, costura caprichada e chegou certinho no prazo. Recomendo demais!",
       "date": "2026-09-17"
+    },
+    {
+      "id": 11,
+      "name": "Natan Oliveira",
+      "title": "Faixa Roxa",
+      "photo": "/images/reviews/natan oliveira.jpeg",
+      "photoFocus": { "x": 63, "y": 34, "zoom": 3.2 },
+      "rating": 5,
+      "text": "Faixa roxa de primeira: costura firme, não desfia e o caimento no treino é ótimo. Atendimento nota 10 e entrega no prazo combinado.",
+      "date": "2026-09-17"
     }
   ]
 }

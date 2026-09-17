@@ -4,10 +4,12 @@ interface CountUpProps {
   end: number;
   label: string;
   suffix?: string;
+  /** "+" por padrão; passe "" para números exatos (ex.: continentes). */
+  prefix?: string;
   duration?: number;
 }
 
-function CountUp({ end, label, suffix = '', duration = 3000 }: CountUpProps) {
+function CountUp({ end, label, suffix = '', prefix = '+', duration = 3000 }: CountUpProps) {
   const [count, setCount] = useState(0);
   const [startAnimation, setStartAnimation] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -59,7 +61,7 @@ function CountUp({ end, label, suffix = '', duration = 3000 }: CountUpProps) {
   return (
     <div ref={ref} className="text-center sm:text-left">
       <p className="text-5xl sm:text-6xl font-black text-brand-black mb-2">
-        +{count.toLocaleString()}{suffix}
+        {prefix}{count.toLocaleString()}{suffix}
       </p>
       <p className="text-sm text-brand-gray-600">{label}</p>
     </div>
@@ -84,10 +86,10 @@ export default function PremiumStats() {
             duration={3000}
           />
 
-          <CountUp 
-            end={5} 
-            label="Continentes atendidos" 
-            
+          <CountUp
+            end={4}
+            label="Continentes atendidos"
+            prefix=""
             duration={2000}
           />
 

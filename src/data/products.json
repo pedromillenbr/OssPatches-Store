@@ -117,6 +117,7 @@
     },
     {
       "id": "faixa-vermelha-preta-adulto",
+      "hidden": true,
       "slug": "faixa-vermelha-preta-adulto",
       "name": "Faixa Vermelha e Preta - Adulto",
       "shortName": "Vermelha e Preta",
@@ -142,6 +143,7 @@
     },
     {
       "id": "faixa-vermelha-branca-adulto",
+      "hidden": true,
       "slug": "faixa-vermelha-branca-adulto",
       "name": "Faixa Vermelha e Branca - Adulto",
       "shortName": "Vermelha e Branca",
@@ -167,6 +169,7 @@
     },
     {
       "id": "faixa-vermelha-adulto",
+      "hidden": true,
       "slug": "faixa-vermelha-adulto",
       "name": "Faixa Vermelha - Adulto",
       "shortName": "Vermelha",

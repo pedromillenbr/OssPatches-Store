@@ -40,12 +40,14 @@ type TimelinePhoto = { src: string; alt: string };
 function TimelineImagePair({ main, detail, year, isLeft }: { main: TimelinePhoto; detail: TimelinePhoto; year: string; isLeft: boolean }) {
   const [detailError, setDetailError] = useState(false);
   return (
-    <div className="relative pb-10 sm:pb-12">
+    // espaço em cima: a foto de detalhe fica no topo para não cobrir a parte de
+    // baixo da foto principal, onde aparece a placa com o nome do Jefferson
+    <div className="relative pt-10 sm:pt-12">
       {/* foco à direita: no celular o quadro corta as laterais e o Jefferson fica na ponta direita da foto */}
       <TimelineImage src={encodeURI(main.src)} alt={main.alt} year={year} position="72% 45%" />
       {!detailError && (
         <div
-          className={`absolute bottom-0 w-[46%] aspect-[3/2] rounded-xl overflow-hidden bg-brand-gray-100 ring-4 ring-white shadow-xl ${
+          className={`absolute top-0 w-[42%] aspect-[3/2] rounded-xl overflow-hidden bg-brand-gray-100 ring-4 ring-white shadow-xl ${
             isLeft ? '-left-2 sm:-left-5' : '-right-2 sm:-right-5'
           }`}
         >
