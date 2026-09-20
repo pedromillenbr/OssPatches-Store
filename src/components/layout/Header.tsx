@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import { useCartStore } from '@/store/cartStore';
 import { useAuth } from '@/context/AuthContext';
@@ -72,6 +73,16 @@ export default function Header() {
     return () => {
       document.body.style.overflow = '';
     };
+  }, [menuOpen]);
+
+  // Tecla Esc fecha o menu (teclado e celulares com teclado externo).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [menuOpen]);
 
   const count = totalItems();
@@ -331,9 +342,22 @@ interface MobileMenuProps {
  * Menu lateral do celular. Antes dessa tela o site simplesmente não tinha
  * navegação abaixo de 768px: quem entrava pelo telefone só conseguia ver a
  * home e o carrinho.
+ *
+ * IMPORTANTE: o painel é renderizado direto no <body> por um portal, e não
+ * dentro do <header>. O header usa backdrop-blur, e pelo CSS um elemento com
+ * backdrop-filter vira o referencial de posicionamento dos filhos "fixed" —
+ * o menu ficava preso na faixa do header e simplesmente não aparecia.
  */
 function MobileMenu({ open, onClose, isLogged, isAdmin, onSignOut }: MobileMenuProps) {
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="md:hidden" aria-hidden={!open}>
       {/* Fundo escurecido */}
       <div
@@ -346,7 +370,7 @@ function MobileMenu({ open, onClose, isLogged, isAdmin, onSignOut }: MobileMenuP
       {/* Painel */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          open ? 'translate-x-0' : '-translate-x-full'
+          open ? 'translate-x-0' : 'pointer-events-none -translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between border-b border-brand-gray-200 px-5 py-4">
@@ -436,7 +460,8 @@ function MobileMenu({ open, onClose, isLogged, isAdmin, onSignOut }: MobileMenuP
           </Link>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
 

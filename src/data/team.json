@@ -26,7 +26,6 @@
         "10x Open IBJJF "
       ]
     },
-    
     {
       "id": "athlete-4",
       "name": "Gelson Ricken",
@@ -40,8 +39,21 @@
         "2x campeão brasileiro regional"
       ]
     },
-
-{
+    {
+      "id": "athlete-7",
+      "name": "Edson Batata",
+      "title": "Campeão AJP Tour 2026 — Etapa Rio de Janeiro",
+      "category": "Peso Pena",
+      "image": "/images/athletes/edson_batata.jpeg",
+      "bio": "2026 foi o ano de Edson: campeão do AJP Tour e do Grand Slam na etapa do Rio de Janeiro, campeão estadual e vice-campeão do Internacional de Masters da IBJJF. Ele leva a OssPatches para o tatame em cada uma dessas disputas.",
+      "achievements": [
+        "Campeão do AJP Tour 2026 (Etapa Rio de Janeiro)",
+        "Campeão do Grand Slam 2026 (Etapa Rio de Janeiro)",
+        "Campeão estadual 2026",
+        "Vice-campeão do Internacional de Masters IBJJF 2026"
+      ]
+    },
+    {
       "id": "athlete-3",
       "hidden": true,
       "name": "Jasmine Ferrari",
@@ -55,7 +67,6 @@
         "+ de 10 Opens IBJJF"
       ]
     },
-
     {
       "id": "athlete-5",
       "hidden": true,
