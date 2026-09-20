@@ -5,7 +5,8 @@ import { sendOrderConfirmationEmail } from '@/services/email';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { handleCors } from '@/lib/cors';
-import { cleanAddress, cleanCustomer, cleanShippingLabel, resolveCoupon, ORDER_ID_REGEX } from '@/lib/checkoutGuards';
+import { cleanAddress, cleanCustomer, cleanShippingLabel, ORDER_ID_REGEX } from '@/lib/checkoutGuards';
+import { checkCoupon, registerUse } from '@/lib/couponUsage';
 import { computePayPalTotals } from '@/lib/paypalTotals';
 import type { Order } from '@/types';
 
@@ -37,7 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Recalcula no servidor o que ESTES itens custam. Validamos ANTES de capturar
   // para não cobrar um carrinho inválido.
-  const coupon = resolveCoupon(couponCode);
+  // Aqui o dinheiro JÁ foi capturado no PayPal — nunca recusamos o pedido por
+  // causa do cupom neste ponto. Se o saldo acabou entre o create e o capture,
+  // `checkCoupon` devolve percent 0 e o pedido segue sem desconto.
+  const coupon = await checkCoupon(couponCode, customer.email);
   const totals = computePayPalTotals(items, coupon.percent);
   if (!totals.ok) return res.status(totals.status).json({ error: totals.error });
 
@@ -91,6 +95,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         : {}),
     };
+
+    // PayPal capturado = compra paga: conta uma das compras do cliente.
+    if (coupon.code && !suspicious) {
+      await registerUse(coupon.code, customer.email);
+    }
 
     try {
       await appendOrderToSheet(order);

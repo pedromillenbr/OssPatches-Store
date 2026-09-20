@@ -3,7 +3,7 @@ import { createPayPalOrder } from '@/services/paypal';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge } from '@/lib/sanitize';
 import { handleCors } from '@/lib/cors';
-import { resolveCoupon } from '@/lib/checkoutGuards';
+import { checkCoupon } from '@/lib/couponUsage';
 import { computePayPalTotals } from '@/lib/paypalTotals';
 import { generateOrderId } from '@/lib/orderId';
 
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (await rejectIfRateLimited('paypal', req, res)) return;
   if (isBodyTooLarge(req, 50 * 1024)) return res.status(413).json({ error: 'Requisição muito grande' });
 
-  const { items, couponCode, countryCode } = req.body ?? {};
+  const { items, couponCode, countryCode, customerEmail } = req.body ?? {};
 
   // PayPal is only for international customers — block BR server-side
   if (typeof countryCode !== 'string' || !/^[A-Z]{2,3}$/.test(countryCode) || countryCode === 'BR') {
@@ -23,7 +23,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // O frete internacional é cobrado à parte, depois da compra (ver ShippingStep).
   // Por isso o valor de frete enviado pelo cliente é IGNORADO — antes ele era
   // somado ao total e um valor negativo baixava o preço cobrado.
-  const totals = computePayPalTotals(items, resolveCoupon(couponCode).percent);
+  // O cupom é conferido JÁ AQUI (e não só na captura) para o cliente nunca
+  // ver um valor com desconto no PayPal e ter a compra recusada depois.
+  const coupon = await checkCoupon(couponCode, typeof customerEmail === 'string' ? customerEmail : undefined);
+  if (couponCode && coupon.error) {
+    return res.status(400).json({ error: coupon.error });
+  }
+
+  const totals = computePayPalTotals(items, coupon.percent);
   if (!totals.ok) return res.status(totals.status).json({ error: totals.error });
 
   const orderId = generateOrderId();

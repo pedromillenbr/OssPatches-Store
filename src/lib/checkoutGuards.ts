@@ -1,7 +1,6 @@
 import type { Address, CustomerIdentification, ShippingOption } from '@/types';
 import { isValidCPF } from '@/lib/cpf';
 import { isValidEmail } from '@/lib/email';
-import { VALID_COUPONS } from '@/config/coupons';
 
 /**
  * Regras de checkout aplicadas no SERVIDOR. Tudo o que chega do navegador pode
@@ -91,13 +90,6 @@ export function cleanShippingLabel(raw: unknown, price: number): ShippingOption 
     days: text(s.days, 60),
     price,
   };
-}
-
-export function resolveCoupon(code: unknown): { code: string | null; percent: number } {
-  if (typeof code !== 'string') return { code: null, percent: 0 };
-  const upper = code.trim().toUpperCase();
-  const percent = VALID_COUPONS[upper];
-  return percent ? { code: upper, percent } : { code: null, percent: 0 };
 }
 
 /** Formato dos IDs gerados por generateOrderId (OSS-AAMMDD-XXXXXXXX). */

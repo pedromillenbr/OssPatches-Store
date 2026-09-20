@@ -6,7 +6,8 @@ import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
 import { generateOrderId } from '@/lib/orderId';
-import { cleanAddress, cleanCustomer, cleanShippingLabel, resolveCoupon } from '@/lib/checkoutGuards';
+import { cleanAddress, cleanCustomer, cleanShippingLabel } from '@/lib/checkoutGuards';
+import { checkCoupon, holdPixUse, registerUse } from '@/lib/couponUsage';
 import { validateShippingCost } from '@/lib/shipping';
 import type { Order } from '@/types';
 
@@ -53,7 +54,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const shippingCheck = await validateShippingCost(address.zipCode, priceResult.items, shippingCost);
   const serverShipping = shippingCheck.shippingCost;
 
-  const coupon = resolveCoupon(couponCode);
+  // Cupom revalidado no servidor (existe, ligado, cliente com saldo).
+  const coupon = await checkCoupon(couponCode, customer.email);
+  if (couponCode && coupon.error) {
+    return res.status(400).json({ error: coupon.error });
+  }
   const discountPercent = coupon.percent;
   const appliedCoupon = coupon.code;
 
@@ -150,6 +155,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     createdAt: now,
     ...(appliedCoupon ? { couponCode: appliedCoupon, discountPercent, discountAmount } : {}),
   };
+
+  // Cartão aprovado na hora já conta como uma das compras do cliente. Se o
+  // Mercado Pago deixou em análise, a contagem fica reservada e só é
+  // confirmada pelo webhook quando o pagamento for aprovado.
+  if (appliedCoupon) {
+    if (mpStatus === 'approved') {
+      await registerUse(appliedCoupon, customer.email);
+    } else {
+      await holdPixUse(orderId, appliedCoupon, customer.email);
+    }
+  }
 
   try { await appendOrderToSheet(order); } catch (err) { console.error('Sheets error:', err); }
   sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));

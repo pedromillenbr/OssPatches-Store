@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { updateOrderStatusInSheet, getOrderFromSheet } from '@/services/googleSheets';
 import { sendPaymentConfirmedEmail } from '@/services/email';
 import { Order } from '@/types';
+import { settlePixUse } from '@/lib/couponUsage';
 
 function validateSignature(req: NextApiRequest, secret: string): boolean {
   const xSignature = req.headers['x-signature'] as string;
@@ -99,6 +100,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const wasAlreadyApproved = existingOrder?.gatewayStatus === 'approved';
 
       await updateOrderStatusInSheet(orderId, status, data.id);
+
+      // Pagamento confirmado: a reserva do cupom vira uso de verdade. O
+      // settlePixUse apaga a reserva antes de contar, então as reentregas do
+      // webhook não contam o mesmo pedido duas vezes.
+      if (status === 'approved') {
+        await settlePixUse(orderId);
+      }
 
       if (status === 'approved' && !wasAlreadyApproved && existingOrder?.customer?.email) {
         sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>

@@ -5,8 +5,13 @@ import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
-export default function CouponInput() {
-  const { appliedCoupon, applyCoupon, removeCoupon } = useCouponStore();
+/**
+ * `email` só existe no checkout, depois que o cliente preencheu os dados. Com
+ * ele o servidor também confere quantas compras o cliente já fez com o cupom;
+ * no carrinho, sem e-mail, só dá para saber se o cupom existe e está ligado.
+ */
+export default function CouponInput({ email }: { email?: string }) {
+  const { appliedCoupon, applyCoupon, removeCoupon, remaining } = useCouponStore();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +22,7 @@ export default function CouponInput() {
     }
 
     setLoading(true);
-    const result = await applyCoupon(code);
+    const result = await applyCoupon(code, email);
 
     if (result.success) {
       const { discountPercent } = useCouponStore.getState();
@@ -32,14 +37,23 @@ export default function CouponInput() {
 
   if (appliedCoupon) {
     return (
-      <div className="flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-2 rounded">
-        <span className="text-sm font-semibold text-green-800">✓ {appliedCoupon}</span>
-        <button
-          onClick={removeCoupon}
-          className="text-xs text-green-600 hover:text-green-800 font-medium"
-        >
-          Remover
-        </button>
+      <div className="bg-green-50 border border-green-200 px-3 py-2 rounded">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-green-800">✓ {appliedCoupon}</span>
+          <button
+            onClick={removeCoupon}
+            className="text-xs text-green-600 hover:text-green-800 font-medium"
+          >
+            Remover
+          </button>
+        </div>
+        {typeof remaining === 'number' && (
+          <p className="mt-1 text-xs text-green-700">
+            {remaining === 1
+              ? 'Esta é a sua última compra com este cupom.'
+              : `Você ainda pode usar este cupom em ${remaining} compras.`}
+          </p>
+        )}
       </div>
     );
   }

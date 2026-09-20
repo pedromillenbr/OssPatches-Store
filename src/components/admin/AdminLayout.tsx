@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 const TABS = [
   { href: '/admin', label: 'Pedidos' },
   { href: '/admin/avaliacoes', label: 'Avaliações' },
+  { href: '/admin/cupons', label: 'Cupons' },
 ];
 
 /** Casca do painel de administração (área do dono da loja). */

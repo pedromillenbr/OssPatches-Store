@@ -230,6 +230,7 @@ function PayPalSection({ items, shippingCost, couponCode, discountPercent, total
               shippingCost,
               couponCode,
               countryCode: customer?.countryCode,
+              customerEmail: customer?.email,
             });
             useCheckoutStore.getState().setOrderId(data.ossOrderId);
             return data.paypalOrderId;
@@ -294,6 +295,25 @@ export default function PaymentStep() {
   const shippingCost = selectedShipping?.price || 0;
   const discountAmount = Math.round(subTotal * discountPercent) / 100;
   const total = subTotal - discountAmount + shippingCost;
+
+  /*
+   * O cupom pode ter sido aplicado no carrinho, quando ainda não sabíamos o
+   * e-mail do cliente. Aqui já sabemos, então revalidamos: se o cupom foi
+   * desligado ou se o cliente esgotou as compras dele, o desconto sai da tela
+   * AGORA, e não só quando o servidor recusar o pedido.
+   */
+  const customerEmail = customer?.email;
+  useEffect(() => {
+    if (!appliedCoupon || !customerEmail) return;
+    useCouponStore
+      .getState()
+      .applyCoupon(appliedCoupon, customerEmail)
+      .then((result) => {
+        if (!result.success && result.error) toast.error(result.error);
+      });
+    // Roda ao entrar no passo de pagamento e se o e-mail mudar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerEmail]);
 
   const availableMethods = PAYMENT_OPTIONS.filter((o) => {
     if (o.brazilOnly && !isBrazil) return false;
@@ -444,7 +464,7 @@ export default function PaymentStep() {
       {/* Coupon */}
       <div>
         <p className="text-xs font-medium text-brand-gray-500 mb-2">Tem um cupom?</p>
-        <CouponInput />
+        <CouponInput email={customerEmail} />
       </div>
 
       {/* Payment method selector */}

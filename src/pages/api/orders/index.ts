@@ -8,7 +8,8 @@ import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
 import { generateOrderId } from '@/lib/orderId';
 import { validateShippingCost } from '@/lib/shipping';
-import { cleanAddress, cleanCustomer, cleanShippingLabel, resolveCoupon } from '@/lib/checkoutGuards';
+import { cleanAddress, cleanCustomer, cleanShippingLabel } from '@/lib/checkoutGuards';
+import { checkCoupon, holdPixUse } from '@/lib/couponUsage';
 
 async function createPixPayment(order: Order, total: number): Promise<{
   mpPaymentId: string;
@@ -125,7 +126,13 @@ export default async function handler(
   const shippingCheck = await validateShippingCost(address.zipCode, priceResult.items, shippingCost);
   const serverShipping = shippingCheck.shippingCost;
 
-  const coupon = resolveCoupon(couponCode);
+  // Cupom revalidado no servidor: existe, está ligado e o cliente ainda tem
+  // compras disponíveis. Se foi recusado, paramos aqui — cobrar sem o
+  // desconto que a tela prometeu seria cobrar a mais sem o cliente saber.
+  const coupon = await checkCoupon(couponCode, customer.email);
+  if (couponCode && coupon.error) {
+    return res.status(400).json({ error: coupon.error });
+  }
   const discountPercent = coupon.percent;
   const appliedCoupon = coupon.code;
 
@@ -150,6 +157,13 @@ export default async function handler(
     createdAt: now,
     ...(appliedCoupon ? { couponCode: appliedCoupon, discountPercent, discountAmount } : {}),
   };
+
+  // O uso do cupom fica "reservado" e só vira uso de verdade quando o
+  // Mercado Pago confirmar o pagamento (ver webhook). Pix gerado e não pago
+  // não queima uma das compras do cliente.
+  if (appliedCoupon) {
+    await holdPixUse(orderId, appliedCoupon, customer.email);
+  }
 
   try {
     await appendOrderToSheet(order);
