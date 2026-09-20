@@ -14,16 +14,17 @@
       ]
     },
     {
-      "id": "athlete-2",
-      "name": "Sirley Baião",
-      "title": "3x Campeã Mundial IBJJF",
-      "category": "Peso Pesado",
-      "image": "/images/athletes/sirley_baiao.jpeg",
-      "bio": "Atleta brasileira de Jiu-Jitsu e faixa Preta 1° grau, Sirley é uma das atletas master mais reconhecidas no esporte internacionalmente. Sua presença nos tatames reflete excelência esportiva, longevidade e autoridade dentro da modalidade.",
+      "id": "athlete-7",
+      "name": "Edson Batata",
+      "title": "Campeão AJP Tour 2026 — Etapa Rio de Janeiro",
+      "category": "Peso Pena",
+      "image": "/images/athletes/edson_batata.jpeg",
+      "bio": "2026 foi o ano de Edson: campeão do AJP Tour e do Grand Slam na etapa do Rio de Janeiro, campeão estadual e vice-campeão do Internacional de Masters da IBJJF. Ele leva a OssPatches para o tatame em cada uma dessas disputas.",
       "achievements": [
-        "Campeã Brasileira 2024 CBJJ",
-        "2° Lugar Ranking Mundial IBJJF 2024",
-        "10x Open IBJJF "
+        "Campeão do AJP Tour 2026 (Etapa Rio de Janeiro)",
+        "Campeão do Grand Slam 2026 (Etapa Rio de Janeiro)",
+        "Campeão estadual 2026",
+        "Vice-campeão do Internacional de Masters IBJJF 2026"
       ]
     },
     {
@@ -40,17 +41,16 @@
       ]
     },
     {
-      "id": "athlete-7",
-      "name": "Edson Batata",
-      "title": "Campeão AJP Tour 2026 — Etapa Rio de Janeiro",
-      "category": "Peso Pena",
-      "image": "/images/athletes/edson_batata.jpeg",
-      "bio": "2026 foi o ano de Edson: campeão do AJP Tour e do Grand Slam na etapa do Rio de Janeiro, campeão estadual e vice-campeão do Internacional de Masters da IBJJF. Ele leva a OssPatches para o tatame em cada uma dessas disputas.",
+      "id": "athlete-2",
+      "name": "Sirley Baião",
+      "title": "3x Campeã Mundial IBJJF",
+      "category": "Peso Pesado",
+      "image": "/images/athletes/sirley_baiao.jpeg",
+      "bio": "Atleta brasileira de Jiu-Jitsu e faixa Preta 1° grau, Sirley é uma das atletas master mais reconhecidas no esporte internacionalmente. Sua presença nos tatames reflete excelência esportiva, longevidade e autoridade dentro da modalidade.",
       "achievements": [
-        "Campeão do AJP Tour 2026 (Etapa Rio de Janeiro)",
-        "Campeão do Grand Slam 2026 (Etapa Rio de Janeiro)",
-        "Campeão estadual 2026",
-        "Vice-campeão do Internacional de Masters IBJJF 2026"
+        "Campeã Brasileira 2024 CBJJ",
+        "2° Lugar Ranking Mundial IBJJF 2024",
+        "10x Open IBJJF "
       ]
     },
     {
