@@ -28,6 +28,8 @@ const CartItem = memo(function CartItem({ item }: CartItemProps) {
     if ('embroideredName' in customization && customization.embroideredName)
       lines.push(`Nome: ${customization.embroideredName}`);
     if ('format' in customization) lines.push(`Formato: ${customization.format}`);
+    if ('dimensions' in customization && customization.dimensions)
+      lines.push(`Dimensões: ${customization.dimensions}`);
     if ('type' in customization)
       lines.push(`Tipo: ${customization.type === 'standard' ? 'Padrão' : customization.type === 'custom' ? 'Personalizado' : 'Equipe'}`);
   }

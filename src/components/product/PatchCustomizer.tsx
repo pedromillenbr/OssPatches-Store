@@ -41,7 +41,7 @@ type KitPatchItem = {
   heightCm: string;
   widthCm: string;
   sideCm: string;
-  circumferenceCm: string;
+  diameterCm: string;
 };
 
 const PATCH_FORMATS: { id: PatchFormat; label: string; icon: string }[] = [
@@ -68,14 +68,14 @@ const PATCH_SIZE_LIMITS: Record<PatchSize, { label: string; min: number; max: nu
 /** Medida sugerida ao abrir a página, dentro da faixa de cada tamanho. */
 const SUGGESTED_MEASURE: Record<PatchSize, number> = { P: 10, M: 14, G: 18 };
 
-/** Folga para absorver arredondamento (31,4cm de circunferência = 9,99cm de diâmetro). */
+/** Folga para absorver arredondamento em medidas com casa decimal. */
 const TOLERANCE = 0.05;
 
 type Dimensions = {
   heightCm: string;
   widthCm: string;
   sideCm: string;
-  circumferenceCm: string;
+  diameterCm: string;
 };
 
 function toNumber(value: string): number | null {
@@ -96,9 +96,8 @@ function rangeLabel(size: PatchSize): string {
 
 /**
  * Maior medida da peça no formato escolhido — é ela que vale contra a faixa do
- * tamanho. No círculo o cliente digita a circunferência, então voltamos ao
- * diâmetro (C ÷ π). No hexágono regular, a maior distância é de um vértice ao
- * oposto, ou seja, 2 × lado.
+ * tamanho. No hexágono regular, a maior distância é de um vértice ao oposto,
+ * ou seja, 2 × lado.
  */
 function measureFor(
   format: PatchFormat,
@@ -121,10 +120,8 @@ function measureFor(
       return side === null ? null : { value: side * 2, label: 'Largura total' };
     }
     case 'circulo': {
-      const circumference = toNumber(dims.circumferenceCm);
-      return circumference === null
-        ? null
-        : { value: circumference / Math.PI, label: 'Diâmetro' };
+      const diameter = toNumber(dims.diameterCm);
+      return diameter === null ? null : { value: diameter, label: 'Diâmetro' };
     }
     default:
       return null;
@@ -148,11 +145,10 @@ function sizeErrorFor(format: PatchFormat, dims: Dimensions, size: PatchSize): s
 
 /**
  * Converte a faixa do tamanho para os limites do campo que o cliente digita
- * (circunferência no círculo, lado no hexágono, e assim por diante).
+ * (lado no hexágono, altura/largura no retângulo, e assim por diante).
  */
 function fieldRangeFor(format: PatchFormat, size: PatchSize): { min: number; max: number } {
   const { min, max } = PATCH_SIZE_LIMITS[size];
-  if (format === 'circulo') return { min: min * Math.PI, max: max * Math.PI };
   if (format === 'hexagonal') return { min: min / 2, max: max / 2 };
   // No retângulo só o maior lado precisa respeitar o mínimo, então o campo é livre por baixo.
   if (format === 'quadrado' || format === 'retangulo') return { min: 1, max };
@@ -171,7 +167,7 @@ function suggestedDims<T extends Dimensions>(format: PatchFormat, size: PatchSiz
     case 'hexagonal':
       return { ...current, sideCm: String(target / 2) };
     case 'circulo':
-      return { ...current, circumferenceCm: (target * Math.PI).toFixed(1) };
+      return { ...current, diameterCm: String(target) };
     default:
       return current;
   }
@@ -189,7 +185,7 @@ function initialDims(size: PatchSize): Dimensions {
     heightCm: String(target),
     widthCm: String(target),
     sideCm: String(target),
-    circumferenceCm: (target * Math.PI).toFixed(1),
+    diameterCm: String(target),
   };
 }
 
@@ -218,7 +214,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
 
   // Dimensões - mostradas seletivamente por formato
   const [dims, setDims] = useState<Dimensions>(() => initialDims(patchSize));
-  const { heightCm, widthCm, sideCm, circumferenceCm } = dims;
+  const { heightCm, widthCm, sideCm, diameterCm } = dims;
 
   const [kitItems, setKitItems] = useState<KitPatchItem[]>(() => [
     { title: 'Primeiro', size: 'P', format: 'circulo', artworkFile: null, ...initialDims('P') },
@@ -280,7 +276,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
       heightCm: item?.heightCm ?? heightCm,
       widthCm: item?.widthCm ?? widthCm,
       sideCm: item?.sideCm ?? sideCm,
-      circumferenceCm: item?.circumferenceCm ?? circumferenceCm,
+      diameterCm: item?.diameterCm ?? diameterCm,
     };
 
     const updateField = (field: keyof typeof valueProps, value: string) => {
@@ -358,11 +354,11 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
         return (
           <>
             <Input
-              label="Circunferência"
+              label="Diâmetro"
               type="number"
-              value={valueProps.circumferenceCm}
-              onChange={(e) => updateField('circumferenceCm', e.target.value)}
-              hint="Perímetro do círculo em centímetros (2 × π × raio)"
+              value={valueProps.diameterCm}
+              onChange={(e) => updateField('diameterCm', e.target.value)}
+              hint="Largura do círculo de ponta a ponta, em centímetros"
               min={minAttr}
               max={maxAttr}
               step="0.5"
@@ -380,15 +376,11 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
     const height = item?.heightCm ?? heightCm;
     const width = item?.widthCm ?? widthCm;
     const side = item?.sideCm ?? sideCm;
-    const circumference = item?.circumferenceCm ?? circumferenceCm;
+    const diameter = item?.diameterCm ?? diameterCm;
 
     switch (itemFormat) {
-      case 'circulo': {
-        const diameter = toNumber(circumference);
-        return diameter === null
-          ? `Circunf. ${circumference}cm`
-          : `Circunf. ${circumference}cm (diâm. ${formatCm(diameter / Math.PI)}cm)`;
-      }
+      case 'circulo':
+        return `Diâm. ${diameter}cm`;
       case 'quadrado':
         return `${height}cm × ${width}cm`;
       case 'retangulo':
@@ -438,8 +430,8 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
           return;
         }
 
-        if (item.format === 'circulo' && !item.circumferenceCm) {
-          toast.error(`Informe a circunferência do ${item.title.toLowerCase()}`);
+        if (item.format === 'circulo' && !item.diameterCm) {
+          toast.error(`Informe o diâmetro do ${item.title.toLowerCase()}`);
           return;
         }
 
@@ -495,8 +487,8 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
       return;
     }
 
-    if (format === 'circulo' && !circumferenceCm) {
-      toast.error('Informe a circunferência do círculo');
+    if (format === 'circulo' && !diameterCm) {
+      toast.error('Informe o diâmetro do círculo');
       return;
     }
 
@@ -524,10 +516,13 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
         format,
         quantity,
         artworkFileName: artworkFile.name,
+        // Resumo legível das medidas — é o que viaja até o e-mail do pedido e a
+        // planilha, para a produção saber o tamanho da peça.
+        dimensions: getDimensionsSummary(format),
         heightCm: format === 'quadrado' || format === 'retangulo' ? parseFloat(heightCm) : undefined,
         widthCm: format === 'quadrado' || format === 'retangulo' ? parseFloat(widthCm) : undefined,
         sideCm: ['triangulo', 'hexagonal'].includes(format) ? parseFloat(sideCm) : undefined,
-        circumferenceCm: format === 'circulo' ? parseFloat(circumferenceCm) : undefined,
+        diameterCm: format === 'circulo' ? parseFloat(diameterCm) : undefined,
       } as any,
     });
 
@@ -654,8 +649,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
           <strong> Grande:</strong> 16 - 22 cm
         </p>
         <p className="mt-2 text-brand-gray-600 text-xs leading-relaxed">
-          Vale a maior medida da peça — no círculo, o diâmetro; no hexágono, a
-          largura de ponta a ponta.
+          Vale a maior medida da peça — no hexágono, a largura de ponta a ponta.
         </p>
       </div>
 

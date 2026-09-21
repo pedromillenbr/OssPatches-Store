@@ -29,6 +29,14 @@ function esc(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+/** "Patch 1: P · circulo · Diâm. 10cm | Patch 2: ..." para o Kit de Patches. */
+function kitDetail(c: Record<string, unknown>): string {
+  if (!Array.isArray(c.items)) return '';
+  return (c.items as Record<string, unknown>[])
+    .map((p, index) => `Patch ${index + 1}: ${esc(p.size)} · ${esc(p.format)} · ${esc(p.dimensions)}`)
+    .join(' | ');
+}
+
 function itemsTable(order: Order): string {
   return order.items
     .map((item) => {
@@ -38,6 +46,8 @@ function itemsTable(order: Order): string {
         'degree' in c ? `Grau: ${esc(c.degree)}` : '',
         c.embroideredName ? `Nome: ${esc(c.embroideredName)}` : '',
         c.format ? `Formato: ${esc(c.format)}` : '',
+        c.dimensions ? `Medidas: ${esc(c.dimensions)}` : '',
+        kitDetail(c),
       ]
         .filter(Boolean)
         .join(' | ');

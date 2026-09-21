@@ -65,6 +65,13 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
         order.payment.method,
         order.status,
         order.notes || '',
+        // Coluna nova, no fim da linha para não deslocar as que já existem.
+        // No Kit as medidas ficam item a item, então juntamos os três numa linha só.
+        Array.isArray(customization.items)
+          ? (customization.items as Record<string, unknown>[])
+              .map((p, index) => `Patch ${index + 1}: ${p.size} ${p.format} ${p.dimensions}`)
+              .join(' | ')
+          : String(customization.dimensions || ''),
       ].map((cell) => (typeof cell === 'string' ? sanitizeSheetValue(cell) : cell));
 
       // RAW: o Sheets grava o texto exatamente como veio, SEM interpretar
