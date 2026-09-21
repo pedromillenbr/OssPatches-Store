@@ -106,8 +106,8 @@ export default function PoliticaDePrivacidadePage() {
                 <strong>Correios / Melhor Envio</strong> — cálculo de frete e entrega.
               </li>
               <li>
-                <strong>Supabase</strong> — banco de dados onde ficam sua conta, pedidos
-                e interesses.
+                <strong>Banco de Dados</strong> — provedor de infraestrutura onde ficam
+                sua conta, pedidos e interesses, com acesso restrito e criptografia.
               </li>
               <li>
                 <strong>Google</strong> (Sheets e Analytics) — gestão de pedidos e

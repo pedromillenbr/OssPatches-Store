@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { PatchProduct } from '@/types';
+import { PatchProduct, PatchSize } from '@/types';
 import { formatPrice } from '@/services/products';
 import { useCartStore } from '@/store/cartStore';
 import { trackAddToCart } from '@/lib/analytics';
@@ -53,6 +53,146 @@ const PATCH_FORMATS: { id: PatchFormat; label: string; icon: string }[] = [
   { id: 'personalizado', label: 'Personalizado', icon: '⬚' },
 ];
 
+/**
+ * Faixa de tamanho de cada patch, em centímetros, medida pela MAIOR dimensão
+ * da peça. O cliente compra um tamanho (P, M ou G) e as medidas que digita
+ * precisam caber nessa faixa — senão dá para encomendar um patch de 22cm
+ * pagando o preço do pequeno.
+ */
+const PATCH_SIZE_LIMITS: Record<PatchSize, { label: string; min: number; max: number }> = {
+  P: { label: 'Pequeno', min: 1, max: 12 },
+  M: { label: 'Médio', min: 12, max: 16 },
+  G: { label: 'Grande', min: 16, max: 22 },
+};
+
+/** Medida sugerida ao abrir a página, dentro da faixa de cada tamanho. */
+const SUGGESTED_MEASURE: Record<PatchSize, number> = { P: 10, M: 14, G: 18 };
+
+/** Folga para absorver arredondamento (31,4cm de circunferência = 9,99cm de diâmetro). */
+const TOLERANCE = 0.05;
+
+type Dimensions = {
+  heightCm: string;
+  widthCm: string;
+  sideCm: string;
+  circumferenceCm: string;
+};
+
+function toNumber(value: string): number | null {
+  const parsed = parseFloat(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+/** 12 -> "12", 9.99 -> "10", 31.41 -> "31,4" */
+function formatCm(value: number): string {
+  return value.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+}
+
+/** "até 12cm" / "12 a 16cm" */
+function rangeLabel(size: PatchSize): string {
+  const { min, max } = PATCH_SIZE_LIMITS[size];
+  return size === 'P' ? `até ${formatCm(max)}cm` : `${formatCm(min)} a ${formatCm(max)}cm`;
+}
+
+/**
+ * Maior medida da peça no formato escolhido — é ela que vale contra a faixa do
+ * tamanho. No círculo o cliente digita a circunferência, então voltamos ao
+ * diâmetro (C ÷ π). No hexágono regular, a maior distância é de um vértice ao
+ * oposto, ou seja, 2 × lado.
+ */
+function measureFor(
+  format: PatchFormat,
+  dims: Dimensions
+): { value: number; label: string } | null {
+  switch (format) {
+    case 'quadrado':
+    case 'retangulo': {
+      const height = toNumber(dims.heightCm);
+      const width = toNumber(dims.widthCm);
+      if (height === null || width === null) return null;
+      return { value: Math.max(height, width), label: 'Maior lado' };
+    }
+    case 'triangulo': {
+      const side = toNumber(dims.sideCm);
+      return side === null ? null : { value: side, label: 'Lado' };
+    }
+    case 'hexagonal': {
+      const side = toNumber(dims.sideCm);
+      return side === null ? null : { value: side * 2, label: 'Largura total' };
+    }
+    case 'circulo': {
+      const circumference = toNumber(dims.circumferenceCm);
+      return circumference === null
+        ? null
+        : { value: circumference / Math.PI, label: 'Diâmetro' };
+    }
+    default:
+      return null;
+  }
+}
+
+/** Mensagem de erro quando a peça não cabe no tamanho comprado. */
+function sizeErrorFor(format: PatchFormat, dims: Dimensions, size: PatchSize): string | null {
+  const measure = measureFor(format, dims);
+  // Campo vazio não é erro de tamanho: a validação de obrigatórios cuida disso.
+  if (!measure) return null;
+  const { label, min, max } = PATCH_SIZE_LIMITS[size];
+  if (measure.value > max + TOLERANCE) {
+    return `${measure.label} de ${formatCm(measure.value)}cm passa do tamanho ${label} (máximo ${formatCm(max)}cm).`;
+  }
+  if (measure.value < min - TOLERANCE) {
+    return `${measure.label} de ${formatCm(measure.value)}cm é menor que o tamanho ${label} (mínimo ${formatCm(min)}cm).`;
+  }
+  return null;
+}
+
+/**
+ * Converte a faixa do tamanho para os limites do campo que o cliente digita
+ * (circunferência no círculo, lado no hexágono, e assim por diante).
+ */
+function fieldRangeFor(format: PatchFormat, size: PatchSize): { min: number; max: number } {
+  const { min, max } = PATCH_SIZE_LIMITS[size];
+  if (format === 'circulo') return { min: min * Math.PI, max: max * Math.PI };
+  if (format === 'hexagonal') return { min: min / 2, max: max / 2 };
+  // No retângulo só o maior lado precisa respeitar o mínimo, então o campo é livre por baixo.
+  if (format === 'quadrado' || format === 'retangulo') return { min: 1, max };
+  return { min, max };
+}
+
+/** Medidas iniciais do formato, dentro da faixa do tamanho. */
+function suggestedDims<T extends Dimensions>(format: PatchFormat, size: PatchSize, current: T): T {
+  const target = SUGGESTED_MEASURE[size];
+  switch (format) {
+    case 'quadrado':
+    case 'retangulo':
+      return { ...current, heightCm: String(target), widthCm: String(target) };
+    case 'triangulo':
+      return { ...current, sideCm: String(target) };
+    case 'hexagonal':
+      return { ...current, sideCm: String(target / 2) };
+    case 'circulo':
+      return { ...current, circumferenceCm: (target * Math.PI).toFixed(1) };
+    default:
+      return current;
+  }
+}
+
+/** Mantém o que o cliente digitou quando já cabe; senão volta para a sugestão. */
+function dimsWithinSize<T extends Dimensions>(format: PatchFormat, size: PatchSize, current: T): T {
+  return sizeErrorFor(format, current, size) ? suggestedDims(format, size, current) : current;
+}
+
+/** Medidas de partida para um patch de determinado tamanho. */
+function initialDims(size: PatchSize): Dimensions {
+  const target = SUGGESTED_MEASURE[size];
+  return {
+    heightCm: String(target),
+    widthCm: String(target),
+    sideCm: String(target),
+    circumferenceCm: (target * Math.PI).toFixed(1),
+  };
+}
+
 /** Número usado no botão de WhatsApp dos pedidos de formato livre. */
 const WHATSAPP_NUMBER = '5521982479922';
 
@@ -68,48 +208,22 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
   const { addItem } = useCartStore();
   const isKit = product.slug === 'kit-de-patches';
 
+  // Cada produto de patch vende um tamanho só (P, M ou G); o kit escolhe item a item.
+  const patchSize: PatchSize = product.sizes[0] ?? 'P';
+
   const [format, setFormat] = useState<PatchFormat>('circulo');
   const [quantity, setQuantity] = useState(1);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [adding, setAdding] = useState(false);
 
   // Dimensões - mostradas seletivamente por formato
-  const [heightCm, setHeightCm] = useState('10');
-  const [widthCm, setWidthCm] = useState('10');
-  const [sideCm, setSideCm] = useState('10'); // Para triângulo, hexágono, octógono
-  const [circumferenceCm, setCircumferenceCm] = useState('31.4'); // 2πr para círculo
+  const [dims, setDims] = useState<Dimensions>(() => initialDims(patchSize));
+  const { heightCm, widthCm, sideCm, circumferenceCm } = dims;
 
   const [kitItems, setKitItems] = useState<KitPatchItem[]>(() => [
-    {
-      title: 'Primeiro',
-      size: 'P',
-      format: 'circulo',
-      artworkFile: null,
-      heightCm: '10',
-      widthCm: '10',
-      sideCm: '10',
-      circumferenceCm: '31.4',
-    },
-    {
-      title: 'Segundo',
-      size: 'M',
-      format: 'circulo',
-      artworkFile: null,
-      heightCm: '10',
-      widthCm: '10',
-      sideCm: '10',
-      circumferenceCm: '31.4',
-    },
-    {
-      title: 'Terceiro',
-      size: 'G',
-      format: 'circulo',
-      artworkFile: null,
-      heightCm: '10',
-      widthCm: '10',
-      sideCm: '10',
-      circumferenceCm: '31.4',
-    },
+    { title: 'Primeiro', size: 'P', format: 'circulo', artworkFile: null, ...initialDims('P') },
+    { title: 'Segundo', size: 'M', format: 'circulo', artworkFile: null, ...initialDims('M') },
+    { title: 'Terceiro', size: 'G', format: 'circulo', artworkFile: null, ...initialDims('G') },
   ]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -142,15 +256,23 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
 
   const handleKitItemChange = (index: number, field: keyof KitPatchItem, value: string | File | null) => {
     setKitItems((prev) =>
-      prev.map((item, idx) =>
-        idx === index
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item
-      )
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        const updated = { ...item, [field]: value } as KitPatchItem;
+        // Trocou de formato ou de tamanho: se as medidas não couberem mais,
+        // voltam para a sugestão daquela faixa em vez de ficarem inválidas.
+        return field === 'format' || field === 'size'
+          ? dimsWithinSize(updated.format, updated.size, updated)
+          : updated;
+      })
     );
+  };
+
+  /** Troca o formato do patch avulso, reajustando as medidas se saírem da faixa. */
+  const handleFormatChange = (next: PatchFormat) => {
+    setFormat(next);
+    onFormatChange?.(FORMAT_IMAGE_INDEX[next]);
+    if (next !== 'personalizado') setDims((prev) => dimsWithinSize(next, patchSize, prev));
   };
 
   const renderDimensionFields = (itemFormat: PatchFormat, item: KitPatchItem | null = null) => {
@@ -165,47 +287,45 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
       if (item) {
         handleKitItemChange(item.title === 'Primeiro' ? 0 : item.title === 'Segundo' ? 1 : 2, field, value);
       } else {
-        switch (field) {
-          case 'heightCm':
-            setHeightCm(value);
-            break;
-          case 'widthCm':
-            setWidthCm(value);
-            break;
-          case 'sideCm':
-            setSideCm(value);
-            break;
-          case 'circumferenceCm':
-            setCircumferenceCm(value);
-            break;
-        }
+        setDims((prev) => ({ ...prev, [field]: value }));
       }
     };
+
+    // Limites do campo digitado, convertidos da faixa do tamanho comprado.
+    const size: PatchSize = item?.size ?? patchSize;
+    const range = fieldRangeFor(itemFormat, size);
+    const minAttr = String(Math.ceil(range.min * 10) / 10);
+    const maxAttr = String(Math.floor(range.max * 10) / 10);
+
+    const feedback = <SizeFeedback format={itemFormat} size={size} dims={valueProps} />;
 
     switch (itemFormat) {
       case 'quadrado':
       case 'retangulo':
         return (
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Altura"
-              type="number"
-              placeholder="10"
-              value={valueProps.heightCm}
-              onChange={(e) => updateField('heightCm', e.target.value)}
-              min="1"
-              step="0.5"
-            />
-            <Input
-              label="Largura"
-              type="number"
-              placeholder="10"
-              value={valueProps.widthCm}
-              onChange={(e) => updateField('widthCm', e.target.value)}
-              min="1"
-              step="0.5"
-            />
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Altura"
+                type="number"
+                value={valueProps.heightCm}
+                onChange={(e) => updateField('heightCm', e.target.value)}
+                min={minAttr}
+                max={maxAttr}
+                step="0.5"
+              />
+              <Input
+                label="Largura"
+                type="number"
+                value={valueProps.widthCm}
+                onChange={(e) => updateField('widthCm', e.target.value)}
+                min={minAttr}
+                max={maxAttr}
+                step="0.5"
+              />
+            </div>
+            {feedback}
+          </>
         );
 
       case 'triangulo':
@@ -215,30 +335,40 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
           hexagonal: 'Tamanho do Lado (hexágono)',
         };
         return (
-          <Input
-            label={labels[itemFormat]}
-            type="number"
-            placeholder="10"
-            value={valueProps.sideCm}
-            onChange={(e) => updateField('sideCm', e.target.value)}
-            hint="Em centímetros"
-            min="1"
-            step="0.5"
-          />
+          <>
+            <Input
+              label={labels[itemFormat]}
+              type="number"
+              value={valueProps.sideCm}
+              onChange={(e) => updateField('sideCm', e.target.value)}
+              hint={
+                itemFormat === 'hexagonal'
+                  ? 'Em centímetros — a largura total do hexágono é 2 × o lado'
+                  : 'Em centímetros'
+              }
+              min={minAttr}
+              max={maxAttr}
+              step="0.5"
+            />
+            {feedback}
+          </>
         );
 
       case 'circulo':
         return (
-          <Input
-            label="Circunferência"
-            type="number"
-            placeholder="31.4"
-            value={valueProps.circumferenceCm}
-            onChange={(e) => updateField('circumferenceCm', e.target.value)}
-            hint="Perímetro do círculo em centímetros (2 × π × raio)"
-            min="1"
-            step="0.5"
-          />
+          <>
+            <Input
+              label="Circunferência"
+              type="number"
+              value={valueProps.circumferenceCm}
+              onChange={(e) => updateField('circumferenceCm', e.target.value)}
+              hint="Perímetro do círculo em centímetros (2 × π × raio)"
+              min={minAttr}
+              max={maxAttr}
+              step="0.5"
+            />
+            {feedback}
+          </>
         );
 
       default:
@@ -253,15 +383,24 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
     const circumference = item?.circumferenceCm ?? circumferenceCm;
 
     switch (itemFormat) {
-      case 'circulo':
-        return `Circunf. ${circumference}cm`;
+      case 'circulo': {
+        const diameter = toNumber(circumference);
+        return diameter === null
+          ? `Circunf. ${circumference}cm`
+          : `Circunf. ${circumference}cm (diâm. ${formatCm(diameter / Math.PI)}cm)`;
+      }
       case 'quadrado':
         return `${height}cm × ${width}cm`;
       case 'retangulo':
         return `${height}cm × ${width}cm`;
       case 'triangulo':
-      case 'hexagonal':
         return `Lado ${side}cm`;
+      case 'hexagonal': {
+        const sideValue = toNumber(side);
+        return sideValue === null
+          ? `Lado ${side}cm`
+          : `Lado ${side}cm (largura ${formatCm(sideValue * 2)}cm)`;
+      }
       case 'personalizado':
         return 'A combinar no WhatsApp';
       default:
@@ -301,6 +440,13 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
 
         if (item.format === 'circulo' && !item.circumferenceCm) {
           toast.error(`Informe a circunferência do ${item.title.toLowerCase()}`);
+          return;
+        }
+
+        // A peça precisa caber no tamanho escolhido para aquele patch.
+        const sizeError = sizeErrorFor(item.format, item, item.size);
+        if (sizeError) {
+          toast.error(`${item.title} patch: ${sizeError}`);
           return;
         }
       }
@@ -351,6 +497,13 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
 
     if (format === 'circulo' && !circumferenceCm) {
       toast.error('Informe a circunferência do círculo');
+      return;
+    }
+
+    // A peça precisa caber na faixa do tamanho que está sendo comprado.
+    const sizeError = sizeErrorFor(format, dims, patchSize);
+    if (sizeError) {
+      toast.error(sizeError);
       return;
     }
 
@@ -405,7 +558,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
               >
                 {product.sizes.map((size) => (
                   <option key={size} value={size}>
-                    {size}
+                    {PATCH_SIZE_LIMITS[size].label} ({rangeLabel(size)})
                   </option>
                 ))}
               </select>
@@ -490,11 +643,19 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
 
       {/* Info about patch sizes */}
       <div className="bg-brand-gray-50 px-4 py-3 text-sm border-l-4 border-brand-black">
-        <p className="font-semibold text-brand-black mb-2">Tamanhos disponíveis</p>
+        <p className="font-semibold text-brand-black mb-2">
+          {isKit
+            ? 'Tamanhos disponíveis'
+            : `Tamanho ${PATCH_SIZE_LIMITS[patchSize].label}: ${rangeLabel(patchSize)}`}
+        </p>
         <p className="text-brand-gray-600 text-xs leading-relaxed">
           <strong>Pequeno:</strong> até 12cm •
           <strong> Médio:</strong> 12 - 16cm •
-          <strong> Grande:</strong> 16 - 22 cm •
+          <strong> Grande:</strong> 16 - 22 cm
+        </p>
+        <p className="mt-2 text-brand-gray-600 text-xs leading-relaxed">
+          Vale a maior medida da peça — no círculo, o diâmetro; no hexágono, a
+          largura de ponta a ponta.
         </p>
       </div>
 
@@ -509,10 +670,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
               {PATCH_FORMATS.map((fmt) => (
                 <button
                   key={fmt.id}
-                  onClick={() => {
-                    setFormat(fmt.id);
-                    onFormatChange?.(FORMAT_IMAGE_INDEX[fmt.id]);
-                  }}
+                  onClick={() => handleFormatChange(fmt.id)}
                   className={clsx(
                     'px-2 sm:px-3 py-4 min-h-[88px] border-2 text-center transition-all flex flex-col items-center justify-center gap-2',
                     format === fmt.id
@@ -631,6 +789,12 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
               </span>
             </div>
             <div className="flex justify-between">
+              <span className="text-brand-gray-300">Tamanho:</span>
+              <span className="font-semibold">
+                {PATCH_SIZE_LIMITS[patchSize].label} ({rangeLabel(patchSize)})
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-brand-gray-300">Dimensões:</span>
               <span className="font-semibold">
                 {getDimensionsSummary(format)}
@@ -677,6 +841,38 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
         </Button>
       )}
     </div>
+  );
+}
+
+/**
+ * Mostra, embaixo dos campos, qual medida a peça terá e se ela cabe no tamanho
+ * comprado. Fica vermelho quando passa (ou não alcança) a faixa.
+ */
+function SizeFeedback({
+  format,
+  size,
+  dims,
+}: {
+  format: PatchFormat;
+  size: PatchSize;
+  dims: Dimensions;
+}) {
+  const measure = measureFor(format, dims);
+  if (!measure) return null;
+
+  const error = sizeErrorFor(format, dims, size);
+  const { label } = PATCH_SIZE_LIMITS[size];
+
+  return (
+    <p
+      className={clsx(
+        'text-xs leading-relaxed',
+        error ? 'font-semibold text-red-600' : 'text-brand-gray-600'
+      )}
+    >
+      {error ??
+        `${measure.label}: ${formatCm(measure.value)}cm — dentro do tamanho ${label} (${rangeLabel(size)}).`}
+    </p>
   );
 }
 
