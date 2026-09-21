@@ -2,8 +2,14 @@ import { Resend } from 'resend';
 import { Order } from '@/types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-// After verifying osspatches.com in Resend dashboard, change to: pedidos@osspatches.com
+// Remetente da loja. Enquanto o domínio não estiver verificado na Resend, o
+// padrão `onboarding@resend.dev` só entrega para o dono da conta — em produção
+// defina RESEND_FROM_EMAIL como: OssPatches <pedidos@osspatches.com>
 const FROM = process.env.RESEND_FROM_EMAIL || 'OssPatches <onboarding@resend.dev>';
+
+// O endereço do remetente não tem caixa de entrada, então a resposta do cliente
+// é desviada para o e-mail que a loja lê de verdade.
+const REPLY_TO = process.env.RESEND_REPLY_TO || 'osspatches@gmail.com';
 
 function formatPrice(value: number, currency = 'BRL'): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value);
@@ -142,6 +148,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
 
   await resend.emails.send({
     from: FROM,
+    replyTo: REPLY_TO,
     to: order.customer.email,
     subject: `Pedido ${order.id.replace(/[^\w-]/g, '')} recebido — OssPatches`,
     html: baseLayout(content),
@@ -185,6 +192,7 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
 
   await resend.emails.send({
     from: FROM,
+    replyTo: REPLY_TO,
     to: order.customer.email,
     subject: `Pagamento confirmado — Pedido ${order.id}`,
     html: baseLayout(content),
