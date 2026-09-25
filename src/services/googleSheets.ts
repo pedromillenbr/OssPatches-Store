@@ -2,15 +2,7 @@ import { google } from 'googleapis';
 import { CartItem, Order } from '@/types';
 import { sanitizeSheetValue } from '@/lib/sanitize';
 
-/** Masks CPF for LGPD compliance: "123.456.789-00" → "***.***.789-**" */
-function maskCpf(cpf: string): string {
-  const digits = cpf.replace(/\D/g, '');
-  if (digits.length !== 11) return '***';
-  return `***.***.${ digits.slice(6, 9) }-**`;
-}
-
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const SHEET_NAME = 'Pedidos';
 
 type RowContext = {
   order: Order;
@@ -23,6 +15,8 @@ type SheetColumn = {
   key: string;
   /** Texto do cabeçalho na planilha. */
   header: string;
+  /** Quando presente, a coluna vira menu suspenso na planilha. */
+  options?: string[];
   value: (ctx: RowContext) => string | number;
 };
 
@@ -34,82 +28,257 @@ function money(value: number | undefined): number {
   return Math.round((value || 0) * 100) / 100;
 }
 
-/** "Patch 1: P · circulo · Diâm. 10cm | Patch 2: ..." para o Kit de Patches. */
-function dimensionsOf(customization: Record<string, unknown>): string {
-  if (Array.isArray(customization.items)) {
-    return (customization.items as Record<string, unknown>[])
-      .map((p, index) => `Patch ${index + 1}: ${text(p.size)} ${text(p.format)} ${text(p.dimensions)}`)
+// ─── Tradução dos códigos internos para o que o dono da loja lê ──────────────
+
+/**
+ * O webhook do Mercado Pago grava o status cru do pagamento nesta mesma coluna
+ * e depois lê de volta para não mandar o e-mail de confirmação duas vezes.
+ * Por isso a tradução precisa ter volta (STATUS_RAW).
+ */
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  in_process: 'Pendente',
+  in_mediation: 'Pendente',
+  authorized: 'Pendente',
+  approved: 'Pago',
+  confirmed: 'Pago',
+  processing: 'Em produção',
+  shipped: 'Enviado',
+  delivered: 'Entregue',
+  rejected: 'Recusado',
+  cancelled: 'Recusado',
+  refunded: 'Estornado',
+  charged_back: 'Estornado',
+};
+
+const STATUS_RAW: Record<string, string> = {
+  Pendente: 'pending',
+  Pago: 'approved',
+  'Em produção': 'processing',
+  Enviado: 'shipped',
+  Entregue: 'delivered',
+  Recusado: 'rejected',
+  Estornado: 'refunded',
+};
+
+const STATUS_OPTIONS = ['Pendente', 'Pago', 'Em produção', 'Enviado', 'Entregue', 'Recusado', 'Estornado'];
+
+export function statusLabel(raw: string): string {
+  return STATUS_LABELS[raw] || raw;
+}
+
+function statusRaw(label: string): string {
+  return STATUS_RAW[label] || label;
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  pix: 'Pix',
+  card: 'Cartão',
+  credit_card: 'Cartão',
+  paypal: 'PayPal',
+};
+
+const PAYMENT_RAW: Record<string, string> = { Pix: 'pix', 'Cartão': 'card', PayPal: 'paypal' };
+const PAYMENT_OPTIONS = ['Pix', 'Cartão', 'PayPal'];
+
+const FORMAT_LABELS: Record<string, string> = {
+  circulo: 'Círculo',
+  triangulo: 'Triângulo',
+  retangulo: 'Retângulo',
+  hexagonal: 'Hexágono',
+  quadrado: 'Quadrado',
+  personalizado: 'Personalizado',
+};
+
+const FORMAT_OPTIONS = Object.values(FORMAT_LABELS);
+
+// ─── Leitura do que o cliente montou ─────────────────────────────────────────
+
+function isKit(customization: Record<string, unknown>): boolean {
+  return Array.isArray(customization.items);
+}
+
+function kitItems(customization: Record<string, unknown>): Record<string, unknown>[] {
+  return (customization.items as Record<string, unknown>[]) || [];
+}
+
+/** "P" | "M" | "G" | "Kit" */
+function patchSize(customization: Record<string, unknown>): string {
+  return isKit(customization) ? 'Kit' : text(customization.size);
+}
+
+function patchFormat(customization: Record<string, unknown>): string {
+  if (isKit(customization)) {
+    return kitItems(customization)
+      .map((p) => FORMAT_LABELS[text(p.format)] || text(p.format))
+      .join(' | ');
+  }
+  const format = text(customization.format);
+  return FORMAT_LABELS[format] || format;
+}
+
+/** "Diâm. 10cm" ou, no kit, "Patch 1: P Círculo Diâm. 10cm | Patch 2: ..." */
+function patchDimensions(customization: Record<string, unknown>): string {
+  if (isKit(customization)) {
+    return kitItems(customization)
+      .map(
+        (p, index) =>
+          `Patch ${index + 1}: ${text(p.size)} ${FORMAT_LABELS[text(p.format)] || text(p.format)} ${text(p.dimensions)}`
+      )
       .join(' | ');
   }
   return text(customization.dimensions);
 }
 
-/**
- * Definição única das colunas: o cabeçalho, a linha gravada e a leitura do
- * webhook saem todos daqui. Antes o código contava posições na mão (row[24]),
- * então mexer numa coluna da planilha quebrava o pagamento em silêncio.
- *
- * Para acrescentar um dado novo, adicione um item no fim desta lista — o
- * cabeçalho da planilha se ajusta sozinho no próximo pedido.
- */
-const COLUMNS: SheetColumn[] = [
-  // Pedido
-  { key: 'id', header: 'ID Pedido', value: ({ order }) => order.id },
-  { key: 'createdAt', header: 'Data', value: ({ order }) => order.createdAt },
+function patchArtwork(customization: Record<string, unknown>): string {
+  if (isKit(customization)) {
+    return kitItems(customization)
+      .map((p) => text(p.artworkFileName))
+      .filter(Boolean)
+      .join(' | ');
+  }
+  return text(customization.artworkFileName);
+}
 
-  // Cliente
-  { key: 'name', header: 'Nome', value: ({ order }) => order.customer.name },
-  { key: 'email', header: 'Email', value: ({ order }) => order.customer.email },
-  { key: 'phone', header: 'WhatsApp', value: ({ order }) => text(order.customer.phone) },
-  { key: 'cpf', header: 'CPF', value: ({ order }) => (order.customer.cpf ? maskCpf(order.customer.cpf) : '') },
-
-  // Entrega — sem rua e número não dá para postar o pedido
-  { key: 'zipCode', header: 'CEP/ZIP', value: ({ order }) => text(order.address.zipCode || order.address.cep) },
-  { key: 'street', header: 'Rua', value: ({ order }) => text(order.address.street) },
-  { key: 'number', header: 'Número', value: ({ order }) => text(order.address.number) },
-  { key: 'complement', header: 'Complemento', value: ({ order }) => text(order.address.complement) },
-  { key: 'neighborhood', header: 'Bairro', value: ({ order }) => text(order.address.neighborhood) },
-  { key: 'city', header: 'Cidade', value: ({ order }) => text(order.address.city) },
-  { key: 'state', header: 'Estado', value: ({ order }) => text(order.address.state) },
-  { key: 'country', header: 'País', value: ({ order }) => text(order.address.country) },
-  { key: 'shipping', header: 'Método Envio', value: ({ order }) => order.shipping?.name || 'A calcular' },
-
-  // Item — o que precisa ser produzido
-  { key: 'product', header: 'Produto', value: ({ item }) => item.name },
-  { key: 'category', header: 'Categoria', value: ({ item }) => item.category },
-  { key: 'type', header: 'Tipo', value: ({ customization }) => text(customization.type) },
-  { key: 'size', header: 'Tamanho', value: ({ customization }) => text(customization.size) },
-  { key: 'format', header: 'Formato', value: ({ customization }) => text(customization.format) },
-  { key: 'dimensions', header: 'Medidas', value: ({ customization }) => dimensionsOf(customization) },
-  {
-    key: 'quantity',
-    header: 'Quantidade',
-    value: ({ item, customization }) =>
-      'quantity' in customization ? text(customization.quantity) : String(item.quantity),
-  },
-  { key: 'degree', header: 'Grau', value: ({ customization }) => text(customization.degree) },
-  { key: 'embroideredName', header: 'Nome Bordado', value: ({ customization }) => text(customization.embroideredName) },
-  { key: 'artwork', header: 'Arte (Patch)', value: ({ customization }) => text(customization.artworkFileName) },
-
-  // Valores
-  { key: 'unitPrice', header: 'Valor Unitário', value: ({ item }) => money(item.price) },
-  { key: 'subtotal', header: 'Subtotal', value: ({ order }) => money(order.subtotal) },
-  { key: 'shippingCost', header: 'Frete', value: ({ order }) => money(order.shippingCost) },
-  { key: 'coupon', header: 'Cupom', value: ({ order }) => text(order.couponCode) },
-  { key: 'discount', header: 'Desconto', value: ({ order }) => money(order.discountAmount) },
-  { key: 'total', header: 'Total', value: ({ order }) => money(order.total) },
-  { key: 'currency', header: 'Moeda', value: ({ order }) => order.currency },
-  { key: 'paymentMethod', header: 'Pagamento', value: ({ order }) => order.payment.method },
-  { key: 'status', header: 'Status', value: ({ order }) => order.status },
-  { key: 'notes', header: 'Observações', value: ({ order }) => text(order.notes) },
+const BELT_COLORS = [
+  'Branca', 'Azul', 'Roxa', 'Marrom', 'Preta',
+  'Vermelha', 'Vermelha e Preta', 'Vermelha e Branca',
+  'Cinza', 'Amarela', 'Laranja', 'Verde',
 ];
 
-const HEADERS = COLUMNS.map((column) => column.header);
+/** "Faixa Vermelha e Preta - Adulto" → "Vermelha e Preta" */
+function beltColor(item: CartItem): string {
+  return item.name
+    .replace(/^faixa\s+/i, '')
+    .replace(/\s*[-–]\s*(adulto|infantil)\s*$/i, '')
+    .trim();
+}
 
-/** Posição da coluna na planilha, pelo nome que usamos no código. */
-function indexOf(key: string): number {
-  const index = COLUMNS.findIndex((column) => column.key === key);
-  if (index === -1) throw new Error(`[sheets] coluna desconhecida: ${key}`);
+/** A0–A2 existem nas duas linhas, então a linha precisa vir separada. */
+function beltLine(item: CartItem): string {
+  return item.category === 'belt-kids' ? 'Infantil' : 'Adulto';
+}
+
+const STRIPE_LABELS: Record<string, string> = {
+  none: 'Sem ponteira',
+  white: 'Branca',
+  black: 'Preta',
+};
+
+// ─── Colunas ─────────────────────────────────────────────────────────────────
+
+/** Cabeçalho comum: quem comprou e para onde vai. */
+const IDENTIFICATION: SheetColumn[] = [
+  { key: 'id', header: 'ID Pedido', value: ({ order }) => order.id },
+  { key: 'createdAt', header: 'Data', value: ({ order }) => order.createdAt },
+  { key: 'name', header: 'Nome', value: ({ order }) => order.customer.name },
+  { key: 'phone', header: 'WhatsApp', value: ({ order }) => text(order.customer.phone) },
+  // Sem o e-mail aqui, o webhook do Pix não tem para onde mandar o
+  // "pagamento confirmado" quando o cliente paga horas depois.
+  { key: 'email', header: 'Email', value: ({ order }) => order.customer.email },
+  { key: 'zipCode', header: 'CEP', value: ({ order }) => text(order.address.zipCode || order.address.cep) },
+  // O CEP leva até a rua, mas número e complemento só existem no pedido.
+  { key: 'number', header: 'Número', value: ({ order }) => text(order.address.number) },
+  { key: 'complement', header: 'Complemento', value: ({ order }) => text(order.address.complement) },
+];
+
+/** Fechamento comum: quantidade, dinheiro e situação. */
+const CLOSING: SheetColumn[] = [
+  { key: 'quantity', header: 'Quantidade', value: ({ item }) => item.quantity },
+  { key: 'value', header: 'Valor', value: ({ item }) => money(item.price * item.quantity) },
+  { key: 'total', header: 'Total', value: ({ order }) => money(order.total) },
+  { key: 'currency', header: 'Moeda', value: ({ order }) => order.currency },
+  {
+    key: 'paymentMethod',
+    header: 'Pagamento',
+    options: PAYMENT_OPTIONS,
+    value: ({ order }) => PAYMENT_LABELS[order.payment.method] || text(order.payment.method),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    options: STATUS_OPTIONS,
+    value: ({ order }) => statusLabel(order.status),
+  },
+];
+
+const PATCH_COLUMNS: SheetColumn[] = [
+  ...IDENTIFICATION,
+  { key: 'size', header: 'Tamanho', options: ['P', 'M', 'G', 'Kit'], value: ({ customization }) => patchSize(customization) },
+  { key: 'format', header: 'Formato', options: FORMAT_OPTIONS, value: ({ customization }) => patchFormat(customization) },
+  { key: 'dimensions', header: 'Medidas', value: ({ customization }) => patchDimensions(customization) },
+  { key: 'artwork', header: 'Arte', value: ({ customization }) => patchArtwork(customization) },
+  ...CLOSING,
+];
+
+const BELT_COLUMNS: SheetColumn[] = [
+  ...IDENTIFICATION,
+  { key: 'line', header: 'Linha', options: ['Adulto', 'Infantil'], value: ({ item }) => beltLine(item) },
+  { key: 'color', header: 'Coloração', options: BELT_COLORS, value: ({ item }) => beltColor(item) },
+  {
+    key: 'size',
+    header: 'Tamanho',
+    options: ['M1', 'M2', 'M3', 'M4', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'],
+    value: ({ customization }) => text(customization.size),
+  },
+  {
+    key: 'degree',
+    header: 'Graus',
+    options: ['0', '1', '2', '3', '4'],
+    value: ({ customization }) => text(customization.degree ?? ''),
+  },
+  {
+    key: 'finish',
+    header: 'Acabamento',
+    options: ['Simples', 'Bordada'],
+    value: ({ customization }) => (customization.type === 'custom' ? 'Bordada' : 'Simples'),
+  },
+  { key: 'embroideredName', header: 'Nome Bordado', value: ({ customization }) => text(customization.embroideredName) },
+  {
+    key: 'stripe',
+    header: 'Ponteira',
+    options: Object.values(STRIPE_LABELS),
+    value: ({ customization }) =>
+      'stripe' in customization ? STRIPE_LABELS[text(customization.stripe)] || text(customization.stripe) : '',
+  },
+  ...CLOSING,
+];
+
+type SheetTab = {
+  name: string;
+  columns: SheetColumn[];
+  /** Decide em qual aba cada item do pedido entra. */
+  accepts: (item: CartItem) => boolean;
+};
+
+const TABS: SheetTab[] = [
+  { name: 'Patches', columns: PATCH_COLUMNS, accepts: (item) => !String(item.category).startsWith('belt') },
+  { name: 'Faixas', columns: BELT_COLUMNS, accepts: (item) => String(item.category).startsWith('belt') },
+];
+
+function tabFor(item: CartItem): SheetTab {
+  return TABS.find((tab) => tab.accepts(item)) || TABS[0];
+}
+
+/**
+ * Remonta o nome do produto a partir da linha da planilha. O e-mail de
+ * "pagamento confirmado" é montado com o que está gravado aqui, então sem isso
+ * o cliente receberia um e-mail dizendo só "Patches".
+ */
+function productNameFrom(tab: SheetTab, cell: (key: string) => string): string {
+  if (tab.name === 'Faixas') {
+    const color = cell('color');
+    const line = cell('line');
+    return ['Faixa', color, line && `- ${line}`].filter(Boolean).join(' ');
+  }
+  const size = cell('size');
+  return size === 'Kit' ? 'Kit de Patches' : ['Patch', size].filter(Boolean).join(' ');
+}
+
+/** Posição da coluna na aba, pelo nome que usamos no código. */
+function indexOf(tab: SheetTab, key: string): number {
+  const index = tab.columns.findIndex((column) => column.key === key);
+  if (index === -1) throw new Error(`[sheets] coluna desconhecida em ${tab.name}: ${key}`);
   return index;
 }
 
@@ -124,8 +293,11 @@ function columnLetter(index: number): string {
   return letter;
 }
 
-const LAST_COLUMN = columnLetter(COLUMNS.length - 1);
-const FULL_RANGE = `${SHEET_NAME}!A:${LAST_COLUMN}`;
+function fullRange(tab: SheetTab): string {
+  return `${tab.name}!A:${columnLetter(tab.columns.length - 1)}`;
+}
+
+// ─── Cliente ─────────────────────────────────────────────────────────────────
 
 async function getAuthClient() {
   const auth = new google.auth.GoogleAuth({
@@ -145,30 +317,101 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+/** Roda uma vez por processo: sem isso seria uma leitura extra a cada pedido. */
+let layoutChecked = false;
+
 /**
- * Garante que a linha 1 bate com COLUMNS. Se alguém mexer no cabeçalho ou se
- * uma coluna nova entrar no código, a planilha se conserta sozinha no próximo
- * pedido — o dono da loja nunca precisa editar isso na mão.
+ * Cria as abas que faltarem, acerta a linha do cabeçalho e aplica os menus
+ * suspensos. Assim o dono da loja nunca precisa editar a planilha na mão — e
+ * se alguém mexer sem querer, o próximo pedido conserta.
  */
-export async function ensureSheetHeaders(spreadsheetId: string, sheets?: SheetsClient): Promise<void> {
+export async function ensureSheetLayout(spreadsheetId: string, sheets?: SheetsClient): Promise<void> {
   const client = sheets || (await getSheetsClient());
 
-  const existing = await client.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${SHEET_NAME}!A1:${LAST_COLUMN}1`,
+  const meta = await client.spreadsheets.get({ spreadsheetId });
+  const existing = meta.data.sheets || [];
+
+  // 1. Abas que ainda não existem.
+  const missing = TABS.filter(
+    (tab) => !existing.some((sheet) => sheet.properties?.title === tab.name)
+  );
+  if (missing.length > 0) {
+    await client.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: missing.map((tab) => ({ addSheet: { properties: { title: tab.name } } })),
+      },
+    });
+  }
+
+  // 2. Cabeçalhos — reescritos só quando não batem com o código.
+  const refreshed = missing.length > 0 ? await client.spreadsheets.get({ spreadsheetId }) : meta;
+  const sheetIdByName = new Map<string, number>();
+  (refreshed.data.sheets || []).forEach((sheet) => {
+    const title = sheet.properties?.title;
+    const id = sheet.properties?.sheetId;
+    if (title && typeof id === 'number') sheetIdByName.set(title, id);
   });
 
-  const current = existing.data.values?.[0] || [];
-  const matches = HEADERS.every((header, index) => current[index] === header);
-  if (matches) return;
+  for (const tab of TABS) {
+    const headers = tab.columns.map((column) => column.header);
+    const lastColumn = columnLetter(tab.columns.length - 1);
 
-  await client.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${SHEET_NAME}!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values: [HEADERS] },
-  });
-  console.log('[sheets] cabeçalho atualizado');
+    const current = await client.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${tab.name}!A1:${lastColumn}1`,
+    });
+    const row = current.data.values?.[0] || [];
+    const matches = headers.every((header, index) => row[index] === header);
+    if (matches) continue;
+
+    await client.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${tab.name}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [headers] },
+    });
+
+    // 3. Menus suspensos nas colunas de opção fixa.
+    const sheetId = sheetIdByName.get(tab.name);
+    if (sheetId === undefined) continue;
+
+    const requests = tab.columns
+      .map((column, index) =>
+        column.options
+          ? {
+              setDataValidation: {
+                range: {
+                  sheetId,
+                  startRowIndex: 1,
+                  endRowIndex: 5000,
+                  startColumnIndex: index,
+                  endColumnIndex: index + 1,
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: column.options.map((option) => ({ userEnteredValue: option })),
+                  },
+                  showCustomUi: true,
+                  // Não bloqueia valores fora da lista: se aparecer um status
+                  // novo do gateway, ele ainda é gravado em vez de dar erro.
+                  strict: false,
+                },
+              },
+            }
+          : null
+      )
+      .filter(Boolean);
+
+    if (requests.length > 0) {
+      await client.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests: requests as never[] },
+      });
+    }
+    console.log(`[sheets] aba "${tab.name}" ajustada`);
+  }
 }
 
 export async function appendOrderToSheet(order: Order): Promise<void> {
@@ -180,23 +423,27 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
 
   try {
     const sheets = await getSheetsClient();
-    await ensureSheetHeaders(spreadsheetId, sheets);
+    if (!layoutChecked) {
+      await ensureSheetLayout(spreadsheetId, sheets);
+      layoutChecked = true;
+    }
 
-    // Flatten items into rows
+    // Cada item vira uma linha, na aba do seu tipo de produto.
     for (const item of order.items) {
       const customization = item.customization as unknown as Record<string, unknown>;
+      const tab = tabFor(item);
       const ctx: RowContext = { order, item, customization };
 
-      const row = COLUMNS.map((column) => column.value(ctx)).map((cell) =>
-        typeof cell === 'string' ? sanitizeSheetValue(cell) : cell
-      );
+      const row = tab.columns
+        .map((column) => column.value(ctx))
+        .map((cell) => (typeof cell === 'string' ? sanitizeSheetValue(cell) : cell));
 
       // RAW: o Sheets grava o texto exatamente como veio, SEM interpretar
       // fórmulas. Com USER_ENTERED, um nome como "=IMAGE(...)" virava fórmula
       // e podia vazar dados de outros clientes ao abrir a planilha.
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `${SHEET_NAME}!A1`,
+        range: `${tab.name}!A1`,
         valueInputOption: 'RAW',
         requestBody: { values: [row] },
       });
@@ -216,58 +463,62 @@ export async function getOrderFromSheet(
   try {
     const sheets = await getSheetsClient();
 
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: FULL_RANGE,
-    });
+    // O pedido pode estar em qualquer uma das abas — procuramos nas duas.
+    for (const tab of TABS) {
+      let rows: string[][];
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: fullRange(tab),
+        });
+        rows = (response.data.values as string[][]) || [];
+      } catch {
+        continue; // aba ainda não existe
+      }
 
-    const rows = response.data.values || [];
-    const row = rows.find((r) => r[0] === orderId);
-    if (!row) return null;
+      const row = rows.find((r) => r[0] === orderId);
+      if (!row) continue;
 
-    /** Lê pelo nome da coluna, então reordenar a planilha não quebra nada. */
-    const cell = (key: string): string => (row[indexOf(key)] as string | undefined) || '';
+      /** Lê pelo nome da coluna, então reordenar a planilha não quebra nada. */
+      const cell = (key: string): string => (row[indexOf(tab, key)] as string | undefined) || '';
 
-    // A coluna de status guarda o status cru do Mercado Pago (ex: "approved",
-    // "pending"). Lemos ela de verdade para permitir idempotência no webhook.
-    const rawStatus = cell('status') || 'pending';
-    const country = cell('country') || 'Brasil';
+      const rawStatus = statusRaw(cell('status')) || 'pending';
+      const rawPayment = PAYMENT_RAW[cell('paymentMethod')] || cell('paymentMethod');
 
-    return {
-      id: cell('id'),
-      createdAt: cell('createdAt'),
-      customer: {
-        name: cell('name'),
-        email: cell('email'),
-        phone: cell('phone') || undefined,
-        country,
-        countryCode: country === 'Brasil' ? 'BR' : 'INT',
-      },
-      address: {
-        street: cell('street'),
-        number: cell('number'),
-        complement: cell('complement') || undefined,
-        neighborhood: cell('neighborhood') || undefined,
-        city: cell('city'),
-        state: cell('state'),
-        country,
-        countryCode: country === 'Brasil' ? 'BR' : 'INT',
-        zipCode: cell('zipCode'),
-      },
-      shipping: cell('shipping')
-        ? { id: '', name: cell('shipping'), company: '', price: 0, days: '' }
-        : null,
-      subtotal: parseFloat(cell('subtotal')) || parseFloat(cell('unitPrice')) || 0,
-      shippingCost: parseFloat(cell('shippingCost')) || 0,
-      total: parseFloat(cell('total')) || 0,
-      currency: cell('currency') || 'BRL',
-      items: [{ name: cell('product') } as never],
-      payment: { method: (cell('paymentMethod') as never) || 'pix' },
-      // Mapeia o status cru do MP para o status interno do pedido.
-      status: rawStatus === 'approved' ? 'confirmed' : 'pending',
-      // Status cru do gateway, usado para idempotência no webhook.
-      gatewayStatus: rawStatus,
-    } as Partial<Order> & { gatewayStatus: string };
+      return {
+        id: cell('id'),
+        createdAt: cell('createdAt'),
+        customer: {
+          name: cell('name'),
+          email: cell('email'),
+          phone: cell('phone') || undefined,
+          country: 'Brasil',
+          countryCode: 'BR',
+        },
+        address: {
+          street: '',
+          number: cell('number'),
+          complement: cell('complement') || undefined,
+          city: '',
+          country: 'Brasil',
+          countryCode: 'BR',
+          zipCode: cell('zipCode'),
+        },
+        shipping: null,
+        subtotal: parseFloat(cell('value')) || 0,
+        shippingCost: 0,
+        total: parseFloat(cell('total')) || 0,
+        currency: cell('currency') || 'BRL',
+        items: [{ name: productNameFrom(tab, cell) } as never],
+        payment: { method: (rawPayment as never) || 'pix' },
+        // Mapeia o status cru do MP para o status interno do pedido.
+        status: rawStatus === 'approved' ? 'confirmed' : 'pending',
+        // Status cru do gateway, usado para idempotência no webhook.
+        gatewayStatus: rawStatus,
+      } as Partial<Order> & { gatewayStatus: string };
+    }
+
+    return null;
   } catch (error) {
     console.error('[sheets] Failed to get order:', error);
     return null;
@@ -284,37 +535,42 @@ export async function updateOrderStatusInSheet(
 
   try {
     const sheets = await getSheetsClient();
+    const label = sanitizeSheetValue(statusLabel(status));
+    let updated = 0;
 
-    // Read all rows to find the order
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: FULL_RANGE,
-    });
+    // O mesmo pedido pode ter linhas nas duas abas (patch + faixa no carrinho).
+    for (const tab of TABS) {
+      let rows: string[][];
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: fullRange(tab),
+        });
+        rows = (response.data.values as string[][]) || [];
+      } catch {
+        continue;
+      }
 
-    const rows = response.data.values || [];
-    const rowIndexes: number[] = [];
+      const statusColumn = columnLetter(indexOf(tab, 'status'));
 
-    rows.forEach((row, index) => {
-      if (row[0] === orderId) rowIndexes.push(index + 1); // 1-based
-    });
+      for (let index = 0; index < rows.length; index += 1) {
+        if (rows[index][0] !== orderId) continue;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${tab.name}!${statusColumn}${index + 1}`,
+          valueInputOption: 'RAW',
+          requestBody: { values: [[label]] },
+        });
+        updated += 1;
+      }
+    }
 
-    if (rowIndexes.length === 0) {
+    if (updated === 0) {
       console.warn(`[sheets] Order ${orderId} not found in sheet`);
       return;
     }
 
-    const statusColumn = columnLetter(indexOf('status'));
-
-    for (const rowIndex of rowIndexes) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${SHEET_NAME}!${statusColumn}${rowIndex}`,
-        valueInputOption: 'RAW',
-        requestBody: { values: [[sanitizeSheetValue(status)]] },
-      });
-    }
-
-    console.log(`[sheets] Updated ${rowIndexes.length} row(s) for order ${orderId} → ${status} (MP: ${mpPaymentId})`);
+    console.log(`[sheets] Updated ${updated} row(s) for order ${orderId} → ${label} (MP: ${mpPaymentId})`);
   } catch (error) {
     console.error('[sheets] Failed to update order status:', error);
   }
