@@ -63,6 +63,9 @@ const STATUS_RAW: Record<string, string> = {
 
 const STATUS_OPTIONS = ['Pendente', 'Pago', 'Em produção', 'Enviado', 'Entregue', 'Recusado', 'Estornado'];
 
+/** Coluna preenchida à mão pelo dono da loja, fora do fluxo do pagamento. */
+const SHIPPING_OPTIONS = ['A produzir', 'Em produção', 'Postado', 'A caminho', 'Entregue'];
+
 export function statusLabel(raw: string): string {
   return STATUS_LABELS[raw] || raw;
 }
@@ -200,6 +203,9 @@ const CLOSING: SheetColumn[] = [
     options: STATUS_OPTIONS,
     value: ({ order }) => statusLabel(order.status),
   },
+  // Coluna do dono da loja: nasce vazia e o sistema nunca mais escreve nela.
+  // Serve para acompanhar o envio sem mexer no Status, que o webhook lê.
+  { key: 'shipping', header: 'Envio', options: SHIPPING_OPTIONS, value: () => '' },
 ];
 
 const PATCH_COLUMNS: SheetColumn[] = [
