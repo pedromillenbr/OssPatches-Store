@@ -2,11 +2,11 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   BELT_WIDTH_CM,
-  EMBROIDERY_FIELD_ASPECT,
   EmbroideryColor,
   EmbroideryFont,
-  LETTER_FRAME_RATIO,
   MAX_EMBROIDERY_CM,
+  applyEmbroideryCase,
+  embroideryFieldAspect,
   fontOf,
   serifFont,
   scriptFont,
@@ -55,7 +55,7 @@ function EmbroideredName({
   const id = useId();
   const gradientId = `thread-${id.replace(/:/g, '')}`;
   const spec = fontOf(font);
-  const letters = name.trim().toUpperCase();
+  const letters = applyEmbroideryCase(name, font);
 
   const textRef = useRef<SVGTextElement>(null);
   const [box, setBox] = useState<Box | null>(null);
@@ -106,7 +106,7 @@ function EmbroideredName({
   const inkWidth = box ? box.width : guessWidth;
 
   // O campo bordado tem 14cm de largura para essa altura de letra.
-  const fieldWidth = inkHeight * EMBROIDERY_FIELD_ASPECT;
+  const fieldWidth = inkHeight * embroideryFieldAspect(font);
   // Não cabendo, aperta os lados — nunca diminui a letra.
   const squeeze = inkWidth > fieldWidth ? fieldWidth / inkWidth : 1;
 
@@ -273,7 +273,7 @@ export default function BeltPreview({
                   // A faixa tem BELT_WIDTH_CM de largura, então cada cm vale
                   // h / BELT_WIDTH_CM pixels aqui dentro.
                   width: (h / BELT_WIDTH_CM) * MAX_EMBROIDERY_CM,
-                  height: h * LETTER_FRAME_RATIO,
+                  height: h * fontOf(nameFont).frameRatio,
                   maxWidth: '100%',
                 }}
               >

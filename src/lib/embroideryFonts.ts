@@ -32,6 +32,16 @@ export const EMBROIDERY_FONTS: {
   production: string;
   cssVar: string;
   weight: number;
+  /** A clássica é bordada sempre em maiúsculas; a manuscrita, não. */
+  uppercase: boolean;
+  placeholder: string;
+  caseHint: string;
+  /**
+   * Quanto da largura da faixa o desenho ocupa. A clássica é só maiúscula,
+   * então ocupa pouco. A manuscrita tem letras que sobem e descem (o "P" e o
+   * "ç" de "Persistência"), então precisa de mais espaço na faixa.
+   */
+  frameRatio: number;
   /**
    * Chutes usados só no primeiro instante, antes de o desenho se medir
    * sozinho, para uma letra de tamanho 100: largura média de um caractere,
@@ -48,6 +58,10 @@ export const EMBROIDERY_FONTS: {
     production: 'Brantford New',
     cssVar: 'var(--font-embroidery-serif)',
     weight: 700,
+    uppercase: true,
+    placeholder: 'PEDRO ALVAREZ',
+    caseHint: 'A clássica é bordada sempre em MAIÚSCULAS.',
+    frameRatio: 0.375,
     charWidth: 0.72,
     capHeight: 0.72,
     viewHeight: 120,
@@ -59,6 +73,10 @@ export const EMBROIDERY_FONTS: {
     production: 'Brush Script',
     cssVar: 'var(--font-embroidery-script)',
     weight: 400,
+    uppercase: false,
+    placeholder: 'Persistência',
+    caseHint: 'A manuscrita é bordada do jeito que você escrever.',
+    frameRatio: 0.6,
     charWidth: 0.6,
     capHeight: 1.0,
     viewHeight: 150,
@@ -77,15 +95,14 @@ export const MAX_EMBROIDERY_CM = 14;
 /** Largura da faixa OssPatches, usada como régua da pré-visualização. */
 export const BELT_WIDTH_CM = 4;
 /**
- * Quanto da largura da faixa as letras ocupam: ~1,5cm numa faixa de 4cm,
- * medido nas fotos de bordados prontos. É esse número, junto com os 14cm,
- * que decide a partir de quantas letras o nome começa a ser apertado —
- * "L. AGUIAR" fica no limite, exatamente como na peça real.
+ * Proporção do campo bordado para cada fonte: os 14cm de largura divididos
+ * pela altura que aquela fonte ocupa na faixa. É esse número que decide a
+ * partir de quantas letras o nome começa a ser apertado — "L. AGUIAR" dá
+ * 13,5cm e fica no limite, exatamente como na peça real.
  */
-export const LETTER_FRAME_RATIO = 0.375;
-/** Proporção do campo bordado: 14cm de largura por 1,5cm de altura. */
-export const EMBROIDERY_FIELD_ASPECT =
-  MAX_EMBROIDERY_CM / (BELT_WIDTH_CM * LETTER_FRAME_RATIO);
+export function embroideryFieldAspect(font: EmbroideryFont | undefined): number {
+  return MAX_EMBROIDERY_CM / (BELT_WIDTH_CM * fontOf(font).frameRatio);
+}
 
 export const EMBROIDERY_COLORS: { id: EmbroideryColor; label: string }[] = [
   { id: 'dourado', label: 'Dourado' },
@@ -94,4 +111,14 @@ export const EMBROIDERY_COLORS: { id: EmbroideryColor; label: string }[] = [
 
 export function fontOf(id: EmbroideryFont | undefined) {
   return EMBROIDERY_FONTS.find((font) => font.id === id) || EMBROIDERY_FONTS[0];
+}
+
+/**
+ * Deixa o texto na caixa em que ele será bordado. O nome é guardado do jeito
+ * que o cliente digitou, e a caixa é aplicada aqui — assim trocar de fonte não
+ * perde o que ele escreveu.
+ */
+export function applyEmbroideryCase(name: string, font: EmbroideryFont | undefined): string {
+  const trimmed = name.trim();
+  return fontOf(font).uppercase ? trimmed.toUpperCase() : trimmed;
 }

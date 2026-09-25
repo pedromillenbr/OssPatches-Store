@@ -12,6 +12,8 @@ import {
   EMBROIDERY_FONTS,
   EmbroideryColor,
   EmbroideryFont,
+  applyEmbroideryCase,
+  fontOf,
   serifFont,
   scriptFont,
 } from '@/lib/embroideryFonts';
@@ -64,7 +66,9 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
         type: productType,
         size: size as never,
         degree: degree as never,
-        embroideredName: productType === 'custom' ? embroideredName.trim() : undefined,
+        // Guardado já na caixa em que será bordado.
+        embroideredName:
+          productType === 'custom' ? applyEmbroideryCase(embroideredName, nameFont) : undefined,
         // A produção precisa saber em qual fonte e cor bordar.
         ...(productType === 'custom' && { nameFont, nameColor }),
         ...(showStripeOption && { stripe }),
@@ -226,13 +230,12 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
         <div className="animate-fade-in space-y-5">
           <Input
             label="Nome a bordar"
-            placeholder="PEDRO ALVAREZ"
+            placeholder={fontOf(nameFont).placeholder}
             value={embroideredName}
-            // O bordado é sempre em maiúsculas, então o campo já converte.
-            onChange={(e) => setEmbroideredName(e.target.value.toUpperCase())}
+            onChange={(e) => setEmbroideredName(e.target.value)}
             maxLength={30}
             required
-            hint="Sempre em maiúsculas. O bordado tem no máximo 14 cm, então nomes longos saem com as letras mais estreitas."
+            hint={`${fontOf(nameFont).caseHint} O bordado tem no máximo 14 cm, então nomes longos saem com as letras mais estreitas.`}
           />
 
           <div>
@@ -255,7 +258,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
                     className="block truncate text-2xl leading-snug text-brand-black"
                     style={{ fontFamily: font.cssVar, fontWeight: font.weight }}
                   >
-                    {embroideredName.trim() || 'SEU NOME'}
+                    {applyEmbroideryCase(embroideredName, font.id) || font.placeholder}
                   </span>
                   <span className="mt-2 block text-xs font-medium text-brand-gray-500">
                     {font.label}
