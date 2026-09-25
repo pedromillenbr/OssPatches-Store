@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   EmbroideryColor,
@@ -7,6 +7,9 @@ import {
   serifFont,
   scriptFont,
 } from '@/lib/embroideryFonts';
+
+/** useLayoutEffect avisa no servidor; no servidor não há o que medir. */
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 interface BeltPreviewProps {
   colorHex: string;
@@ -21,12 +24,15 @@ interface BeltPreviewProps {
   compact?: boolean;
 }
 
+type Box = { x: number; y: number; width: number; height: number };
+
 /**
  * Nome bordado, desenhado em SVG.
  *
- * O viewBox cresce junto com o número de letras e o SVG se encaixa sozinho no
- * espaço disponível: nome curto sai grande, nome longo sai menor — igual à
- * faixa de verdade, onde o bordado tem que caber na largura da peça.
+ * O desenho se mede sozinho: depois que a fonte carrega, perguntamos ao
+ * navegador o tamanho real das letras e recortamos o quadro em volta delas.
+ * Assim o nome ocupa toda a faixa sem sobra, seja qual for a fonte — e nome
+ * curto sai grande, nome longo sai menor, como na peça de verdade.
  */
 function EmbroideredName({
   name,
@@ -42,24 +48,73 @@ function EmbroideredName({
   const id = useId();
   const gradientId = `thread-${id.replace(/:/g, '')}`;
   const spec = fontOf(font);
-
   const letters = name.trim().toUpperCase();
-  if (!letters) return null;
+
+  const textRef = useRef<SVGTextElement>(null);
+  const [box, setBox] = useState<Box | null>(null);
 
   const FONT_SIZE = 100;
-  // Folga proposital: se a conta errar para mais sobra margem, se errar para
-  // menos o nome seria cortado.
-  const width = Math.max(letters.length, 4) * FONT_SIZE * spec.charWidth;
-  const height = spec.viewHeight;
-  const baseline = height * spec.baseline;
+  // Enquadramento aproximado, usado só no primeiro instante.
+  const guessWidth = Math.max(letters.length, 4) * FONT_SIZE * spec.charWidth;
+  const baseline = spec.viewHeight * spec.baseline;
+
+  useIsomorphicLayoutEffect(() => {
+    const element = textRef.current;
+    if (!element || !letters) return;
+    let alive = true;
+
+    const measure = () => {
+      if (!alive || !textRef.current) return;
+      try {
+        const measured = textRef.current.getBBox();
+        if (measured.width > 0) {
+          setBox({
+            x: measured.x,
+            y: measured.y,
+            width: measured.width,
+            height: measured.height,
+          });
+        }
+      } catch {
+        // getBBox falha se o elemento ainda não estiver renderizado; o
+        // enquadramento aproximado continua valendo.
+      }
+    };
+
+    measure();
+    // A primeira medida pode pegar a fonte substituta, então refazemos quando
+    // a fonte real termina de carregar.
+    document.fonts?.ready.then(measure).catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, [letters, font]);
+
+  if (!letters) return null;
+
+  // Folga em volta das letras — cobre também a sombra, deslocada 4 para baixo.
+  const pad = 12;
+  const view: Box = box
+    ? { x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, height: box.height + pad * 2 }
+    : { x: 0, y: 0, width: guessWidth, height: spec.viewHeight };
 
   const isGold = color === 'dourado';
   // Fio branco em faixa branca sumiria, então ganha um contorno discreto.
   const needsOutline = !isGold && onLightBelt;
 
+  const textProps = {
+    x: guessWidth / 2,
+    y: baseline,
+    textAnchor: 'middle' as const,
+    fontSize: FONT_SIZE,
+    fontFamily: spec.cssVar,
+    fontWeight: spec.weight,
+  };
+
   return (
     <svg
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
       preserveAspectRatio="xMidYMid meet"
       className="h-full w-full"
       role="img"
@@ -85,26 +140,13 @@ function EmbroideredName({
       </defs>
 
       {/* Sombra: dá o relevo do fio sobre o tecido. */}
-      <text
-        x={width / 2}
-        y={baseline}
-        textAnchor="middle"
-        fontSize={FONT_SIZE}
-        fontFamily={spec.cssVar}
-        fontWeight={font === 'serifada' ? 700 : 400}
-        fill="rgba(0,0,0,0.38)"
-        transform="translate(0, 4)"
-      >
+      <text {...textProps} fill="rgba(0,0,0,0.38)" transform="translate(0, 4)">
         {letters}
       </text>
 
       <text
-        x={width / 2}
-        y={baseline}
-        textAnchor="middle"
-        fontSize={FONT_SIZE}
-        fontFamily={spec.cssVar}
-        fontWeight={font === 'serifada' ? 700 : 400}
+        {...textProps}
+        ref={textRef}
         fill={`url(#${gradientId})`}
         stroke={needsOutline ? 'rgba(0,0,0,0.25)' : undefined}
         strokeWidth={needsOutline ? 1.5 : undefined}

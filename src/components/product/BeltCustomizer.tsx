@@ -253,7 +253,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
                 >
                   <span
                     className="block truncate text-2xl leading-snug text-brand-black"
-                    style={{ fontFamily: font.cssVar }}
+                    style={{ fontFamily: font.cssVar, fontWeight: font.weight }}
                   >
                     {embroideredName.trim() || 'SEU NOME'}
                   </span>

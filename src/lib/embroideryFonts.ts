@@ -1,25 +1,23 @@
-import { Cinzel, Yellowtail } from 'next/font/google';
+import localFont from 'next/font/local';
 
 /**
- * Fontes da pré-visualização do bordado.
+ * Fontes reais do bordado da OssPatches, servidas pelo próprio site.
  *
- * As fontes usadas na produção são a "Brantford New" e a "Brush Script", que
- * são licenciadas e não podem ser servidas pelo site. Usamos aqui as duas
- * parecidas mais próximas do Google Fonts — o cliente vê o estilo certo, e a
- * peça é bordada com a fonte original. Se um dia tivermos o arquivo das
- * fontes reais, basta trocar por next/font/local aqui: o resto do site não
- * muda, porque tudo lê pelas variáveis CSS abaixo.
+ * A Brantford veio do pacote com licença de webfont (pasta WebFonts), por isso
+ * usamos o .woff2 dela. A Brush Script só tinha o .otf, que o next/font também
+ * aceita e converte no build.
  */
-export const serifFont = Cinzel({
-  subsets: ['latin'],
-  weight: ['600', '700'],
+export const serifFont = localFont({
+  src: [
+    { path: '../fonts/BrantFordTypeface-SemiBold.woff2', weight: '600', style: 'normal' },
+    { path: '../fonts/BrantFordTypeface-Bold.woff2', weight: '700', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-embroidery-serif',
 });
 
-export const scriptFont = Yellowtail({
-  subsets: ['latin'],
-  weight: '400',
+export const scriptFont = localFont({
+  src: [{ path: '../fonts/BrushScriptOpti-Regular.otf', weight: '400', style: 'normal' }],
   display: 'swap',
   variable: '--font-embroidery-script',
 });
@@ -33,15 +31,13 @@ export const EMBROIDERY_FONTS: {
   /** Nome da fonte real, que vai para a produção. */
   production: string;
   cssVar: string;
-  /** Largura média de um caractere, em ems — usada para a peça caber na faixa. */
-  charWidth: number;
+  weight: number;
   /**
-   * Altura do quadro do desenho, para uma letra de 100. Sobra vertical demais
-   * faz o nome encolher no meio da faixa, então cada fonte tem a sua: a
-   * manuscrita precisa de espaço embaixo para as caudas das letras.
+   * Chute usado só no primeiro instante, antes de o desenho se medir sozinho:
+   * largura média de um caractere e altura do quadro, para uma letra de 100.
    */
+  charWidth: number;
   viewHeight: number;
-  /** Onde fica a linha de base dentro desse quadro. */
   baseline: number;
 }[] = [
   {
@@ -49,7 +45,8 @@ export const EMBROIDERY_FONTS: {
     label: 'Clássica',
     production: 'Brantford New',
     cssVar: 'var(--font-embroidery-serif)',
-    charWidth: 0.78,
+    weight: 700,
+    charWidth: 0.72,
     viewHeight: 120,
     baseline: 0.79,
   },
@@ -58,9 +55,10 @@ export const EMBROIDERY_FONTS: {
     label: 'Manuscrita',
     production: 'Brush Script',
     cssVar: 'var(--font-embroidery-script)',
-    charWidth: 0.7,
+    weight: 400,
+    charWidth: 0.6,
     viewHeight: 150,
-    baseline: 0.65,
+    baseline: 0.68,
   },
 ];
 
