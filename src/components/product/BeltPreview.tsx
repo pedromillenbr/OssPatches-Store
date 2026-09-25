@@ -148,10 +148,11 @@ function EmbroideredName({
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           {isGold ? (
             <>
-              <stop offset="0%" stopColor="#F9E79B" />
-              <stop offset="38%" stopColor="#D9A93B" />
-              <stop offset="62%" stopColor="#B8860B" />
-              <stop offset="100%" stopColor="#EBD489" />
+              {/* Dourado do fio real: mais fosco e claro que um dourado puro. */}
+              <stop offset="0%" stopColor="#EFDDA8" />
+              <stop offset="38%" stopColor="#CBAE6A" />
+              <stop offset="62%" stopColor="#B08F4B" />
+              <stop offset="100%" stopColor="#DFCB92" />
             </>
           ) : (
             <>

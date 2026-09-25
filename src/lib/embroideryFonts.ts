@@ -74,11 +74,16 @@ export const EMBROIDERY_FONTS: {
  * esticada para cima. A pré-visualização faz o mesmo.
  */
 export const MAX_EMBROIDERY_CM = 14;
-/** Largura da faixa, usada como régua da pré-visualização. */
-export const BELT_WIDTH_CM = 4.5;
-/** Quanto da largura da faixa as letras ocupam. */
-export const LETTER_FRAME_RATIO = 0.62;
-/** Proporção do campo bordado: 14cm de largura por ~2,8cm de altura. */
+/** Largura da faixa OssPatches, usada como régua da pré-visualização. */
+export const BELT_WIDTH_CM = 4;
+/**
+ * Quanto da largura da faixa as letras ocupam: ~1,5cm numa faixa de 4cm,
+ * medido nas fotos de bordados prontos. É esse número, junto com os 14cm,
+ * que decide a partir de quantas letras o nome começa a ser apertado —
+ * "L. AGUIAR" fica no limite, exatamente como na peça real.
+ */
+export const LETTER_FRAME_RATIO = 0.375;
+/** Proporção do campo bordado: 14cm de largura por 1,5cm de altura. */
 export const EMBROIDERY_FIELD_ASPECT =
   MAX_EMBROIDERY_CM / (BELT_WIDTH_CM * LETTER_FRAME_RATIO);
 
