@@ -168,6 +168,17 @@ const STRIPE_LABELS: Record<string, string> = {
   black: 'Preta',
 };
 
+/** O site mostra um apelido; a produção precisa do nome real da fonte. */
+const EMBROIDERY_FONT_LABELS: Record<string, string> = {
+  serifada: 'Brantford New',
+  manuscrita: 'Brush Script',
+};
+
+const EMBROIDERY_COLOR_LABELS: Record<string, string> = {
+  dourado: 'Dourado',
+  branco: 'Branco',
+};
+
 // ─── Colunas ─────────────────────────────────────────────────────────────────
 
 /** Cabeçalho comum: quem comprou e para onde vai. */
@@ -240,6 +251,18 @@ const BELT_COLUMNS: SheetColumn[] = [
     value: ({ customization }) => (customization.type === 'custom' ? 'Bordada' : 'Simples'),
   },
   { key: 'embroideredName', header: 'Nome Bordado', value: ({ customization }) => text(customization.embroideredName) },
+  {
+    key: 'nameFont',
+    header: 'Fonte',
+    options: Object.values(EMBROIDERY_FONT_LABELS),
+    value: ({ customization }) => EMBROIDERY_FONT_LABELS[text(customization.nameFont)] || '',
+  },
+  {
+    key: 'nameColor',
+    header: 'Cor do Bordado',
+    options: Object.values(EMBROIDERY_COLOR_LABELS),
+    value: ({ customization }) => EMBROIDERY_COLOR_LABELS[text(customization.nameColor)] || '',
+  },
   {
     key: 'stripe',
     header: 'Ponteira',

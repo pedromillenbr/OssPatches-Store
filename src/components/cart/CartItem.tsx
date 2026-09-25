@@ -25,8 +25,12 @@ const CartItem = memo(function CartItem({ item }: CartItemProps) {
     if ('size' in customization) lines.push(`Tamanho: ${customization.size}`);
     if ('degree' in customization && customization.degree !== undefined)
       lines.push(`Graus: ${customization.degree}`);
-    if ('embroideredName' in customization && customization.embroideredName)
+    if ('embroideredName' in customization && customization.embroideredName) {
       lines.push(`Nome: ${customization.embroideredName}`);
+      const fontLabel = customization.nameFont === 'manuscrita' ? 'Manuscrita' : 'Clássica';
+      const colorLabel = customization.nameColor === 'branco' ? 'Branco' : 'Dourado';
+      lines.push(`Bordado: ${fontLabel} · ${colorLabel}`);
+    }
     if ('format' in customization) lines.push(`Formato: ${customization.format}`);
     if ('dimensions' in customization && customization.dimensions)
       lines.push(`Dimensões: ${customization.dimensions}`);

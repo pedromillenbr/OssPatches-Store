@@ -7,6 +7,14 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import DynamicMessage from '@/components/ui/DynamicMessage';
 import BeltPreview from '@/components/product/BeltPreview';
+import {
+  EMBROIDERY_COLORS,
+  EMBROIDERY_FONTS,
+  EmbroideryColor,
+  EmbroideryFont,
+  serifFont,
+  scriptFont,
+} from '@/lib/embroideryFonts';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -24,6 +32,8 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
   const [size, setSize] = useState(product.sizes[2] || product.sizes[0]);
   const [degree, setDegree] = useState<number>(0);
   const [embroideredName, setEmbroideredName] = useState('');
+  const [nameFont, setNameFont] = useState<EmbroideryFont>('serifada');
+  const [nameColor, setNameColor] = useState<EmbroideryColor>('dourado');
   const [stripe, setStripe] = useState<StripeOption>('none');
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -55,6 +65,8 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
         size: size as never,
         degree: degree as never,
         embroideredName: productType === 'custom' ? embroideredName.trim() : undefined,
+        // A produção precisa saber em qual fonte e cor bordar.
+        ...(productType === 'custom' && { nameFont, nameColor }),
         ...(showStripeOption && { stripe }),
       },
     });
@@ -65,7 +77,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={clsx('space-y-6', serifFont.variable, scriptFont.variable)}>
       {/* Price */}
       <div>
         <div className="flex items-baseline gap-3">
@@ -92,6 +104,8 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
           degree={degree}
           stripe={stripe}
           embroideredName={productType === 'custom' ? embroideredName : undefined}
+          nameFont={nameFont}
+          nameColor={nameColor}
           size={String(size)}
         />
       </div>
@@ -209,16 +223,79 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
 
       {/* Name embroidery — only for custom */}
       {productType === 'custom' && (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in space-y-5">
           <Input
             label="Nome a bordar"
-            placeholder="Ex: Pedro Alvarez"
+            placeholder="PEDRO ALVAREZ"
             value={embroideredName}
-            onChange={(e) => setEmbroideredName(e.target.value)}
+            // O bordado é sempre em maiúsculas, então o campo já converte.
+            onChange={(e) => setEmbroideredName(e.target.value.toUpperCase())}
             maxLength={30}
             required
-            hint="Máximo 30 caracteres — aparecerá bordado na faixa"
+            hint="Até 30 caracteres — o bordado é sempre em letras maiúsculas"
           />
+
+          <div>
+            <label className="label-field">Fonte do bordado</label>
+            <div className="grid grid-cols-2 gap-3">
+              {EMBROIDERY_FONTS.map((font) => (
+                <button
+                  key={font.id}
+                  type="button"
+                  onClick={() => setNameFont(font.id)}
+                  aria-pressed={nameFont === font.id}
+                  className={clsx(
+                    'border-2 px-3 py-4 text-center transition-all',
+                    nameFont === font.id
+                      ? 'border-brand-black bg-brand-gray-50'
+                      : 'border-brand-gray-200 hover:border-brand-gray-400'
+                  )}
+                >
+                  <span
+                    className="block truncate text-2xl leading-snug text-brand-black"
+                    style={{ fontFamily: font.cssVar }}
+                  >
+                    {embroideredName.trim() || 'SEU NOME'}
+                  </span>
+                  <span className="mt-2 block text-xs font-medium text-brand-gray-500">
+                    {font.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label-field">Cor do bordado</label>
+            <div className="grid grid-cols-2 gap-3">
+              {EMBROIDERY_COLORS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setNameColor(option.id)}
+                  aria-pressed={nameColor === option.id}
+                  className={clsx(
+                    'flex items-center gap-3 border-2 px-4 py-3 transition-all',
+                    nameColor === option.id
+                      ? 'border-brand-black bg-brand-gray-50'
+                      : 'border-brand-gray-200 hover:border-brand-gray-400'
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className="h-6 w-6 shrink-0 rounded-full border border-brand-gray-300"
+                    style={{
+                      background:
+                        option.id === 'dourado'
+                          ? 'linear-gradient(135deg, #F9E79B 0%, #D9A93B 45%, #B8860B 70%, #EBD489 100%)'
+                          : 'linear-gradient(135deg, #FFFFFF 0%, #ECECEA 100%)',
+                    }}
+                  />
+                  <span className="text-sm font-medium text-brand-black">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -264,6 +341,8 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             degree={degree}
             stripe={stripe}
             embroideredName={productType === 'custom' ? embroideredName : undefined}
+            nameFont={nameFont}
+            nameColor={nameColor}
             compact
           />
         </div>

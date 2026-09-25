@@ -45,6 +45,11 @@ function itemsTable(order: Order): string {
         c.size ? `Tam: ${esc(c.size)}` : '',
         'degree' in c ? `Grau: ${esc(c.degree)}` : '',
         c.embroideredName ? `Nome: ${esc(c.embroideredName)}` : '',
+        c.embroideredName
+          ? `Bordado: ${esc(c.nameFont === 'manuscrita' ? 'Brush Script' : 'Brantford New')} · ${esc(
+              c.nameColor === 'branco' ? 'Branco' : 'Dourado'
+            )}`
+          : '',
         c.format ? `Formato: ${esc(c.format)}` : '',
         c.dimensions ? `Medidas: ${esc(c.dimensions)}` : '',
         kitDetail(c),

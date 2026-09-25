@@ -65,6 +65,8 @@ export interface BeltCustomization {
   size: BeltSize | KidsBeltSize;
   degree: BeltDegree;
   embroideredName?: string;
+  nameFont?: 'serifada' | 'manuscrita'; // Brantford New ou Brush Script
+  nameColor?: 'dourado' | 'branco';
   stripe?: 'none' | 'white' | 'black'; // Para faixas infantis
 }
 

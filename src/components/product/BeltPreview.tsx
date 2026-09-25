@@ -1,4 +1,12 @@
+import { useId } from 'react';
 import clsx from 'clsx';
+import {
+  EmbroideryColor,
+  EmbroideryFont,
+  fontOf,
+  serifFont,
+  scriptFont,
+} from '@/lib/embroideryFonts';
 
 interface BeltPreviewProps {
   colorHex: string;
@@ -7,8 +15,105 @@ interface BeltPreviewProps {
   degree: number;
   stripe?: 'none' | 'white' | 'black';
   embroideredName?: string;
+  nameFont?: EmbroideryFont;
+  nameColor?: EmbroideryColor;
   size?: string;
   compact?: boolean;
+}
+
+/**
+ * Nome bordado, desenhado em SVG.
+ *
+ * O viewBox cresce junto com o número de letras e o SVG se encaixa sozinho no
+ * espaço disponível: nome curto sai grande, nome longo sai menor — igual à
+ * faixa de verdade, onde o bordado tem que caber na largura da peça.
+ */
+function EmbroideredName({
+  name,
+  font,
+  color,
+  onLightBelt,
+}: {
+  name: string;
+  font: EmbroideryFont;
+  color: EmbroideryColor;
+  onLightBelt: boolean;
+}) {
+  const id = useId();
+  const gradientId = `thread-${id.replace(/:/g, '')}`;
+  const spec = fontOf(font);
+
+  const letters = name.trim().toUpperCase();
+  if (!letters) return null;
+
+  const FONT_SIZE = 100;
+  // Folga proposital: se a conta errar para mais sobra margem, se errar para
+  // menos o nome seria cortado.
+  const width = Math.max(letters.length, 4) * FONT_SIZE * spec.charWidth;
+  const height = spec.viewHeight;
+  const baseline = height * spec.baseline;
+
+  const isGold = color === 'dourado';
+  // Fio branco em faixa branca sumiria, então ganha um contorno discreto.
+  const needsOutline = !isGold && onLightBelt;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="h-full w-full"
+      role="img"
+      aria-label={`Nome ${letters} bordado na faixa`}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          {isGold ? (
+            <>
+              <stop offset="0%" stopColor="#F9E79B" />
+              <stop offset="38%" stopColor="#D9A93B" />
+              <stop offset="62%" stopColor="#B8860B" />
+              <stop offset="100%" stopColor="#EBD489" />
+            </>
+          ) : (
+            <>
+              <stop offset="0%" stopColor="#FFFFFF" />
+              <stop offset="55%" stopColor="#F2F2F0" />
+              <stop offset="100%" stopColor="#DCDCD8" />
+            </>
+          )}
+        </linearGradient>
+      </defs>
+
+      {/* Sombra: dá o relevo do fio sobre o tecido. */}
+      <text
+        x={width / 2}
+        y={baseline}
+        textAnchor="middle"
+        fontSize={FONT_SIZE}
+        fontFamily={spec.cssVar}
+        fontWeight={font === 'serifada' ? 700 : 400}
+        fill="rgba(0,0,0,0.38)"
+        transform="translate(0, 4)"
+      >
+        {letters}
+      </text>
+
+      <text
+        x={width / 2}
+        y={baseline}
+        textAnchor="middle"
+        fontSize={FONT_SIZE}
+        fontFamily={spec.cssVar}
+        fontWeight={font === 'serifada' ? 700 : 400}
+        fill={`url(#${gradientId})`}
+        stroke={needsOutline ? 'rgba(0,0,0,0.25)' : undefined}
+        strokeWidth={needsOutline ? 1.5 : undefined}
+        paintOrder="stroke"
+      >
+        {letters}
+      </text>
+    </svg>
+  );
 }
 
 export default function BeltPreview({
@@ -18,6 +123,8 @@ export default function BeltPreview({
   degree,
   stripe = 'none',
   embroideredName,
+  nameFont = 'serifada',
+  nameColor = 'dourado',
   size,
   compact = false,
 }: BeltPreviewProps) {
@@ -26,18 +133,28 @@ export default function BeltPreview({
   const isBicolor = isRedBlack || isRedWhite;
   const tipColor = color === 'black' ? '#DC2626' : '#171717';
   const isWhite = color === 'white';
-  const h = compact ? 32 : 48;
-  const tipW = compact ? 40 : 64;
-  const stripeBarW = compact ? 3 : 5;
+  // Faixa bem mais alta que antes: o bordado precisa ser lido de verdade.
+  const h = compact ? 40 : 104;
+  const tipW = compact ? 48 : 112;
+  const stripeBarW = compact ? 3 : 6;
 
   const stripeColor =
     stripe === 'white' ? '#F5F5F5' : stripe === 'black' ? '#171717' : null;
 
   return (
-    <div className={clsx('w-full select-none', compact ? 'py-1' : 'py-3 px-2')}>
+    <div
+      className={clsx(
+        'w-full select-none',
+        serifFont.variable,
+        scriptFont.variable,
+        compact ? 'py-1' : 'py-3'
+      )}
+    >
       {/* Belt — horizontal bar layout matching real belt appearance */}
-      <div className="flex items-stretch w-full" style={{ height: h }}>
-
+      <div
+        className={clsx('flex items-stretch w-full', !compact && 'shadow-sm')}
+        style={{ height: h }}
+      >
         {/* Main body */}
         <div
           className="flex-1 relative overflow-hidden"
@@ -48,12 +165,22 @@ export default function BeltPreview({
             border: isWhite ? '1px solid #D4D4D4' : 'none',
           }}
         >
+          {/* Trama do tecido: listras finas que dão textura de faixa. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-25"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(90deg, rgba(255,255,255,0.10) 0 1px, rgba(0,0,0,0.10) 1px 3px)',
+            }}
+          />
+
           {/* Horizontal stripe running the full length */}
           {stripeColor && (
             <div
               className="absolute inset-x-0"
               style={{
-                height: compact ? 6 : 9,
+                height: compact ? 7 : 16,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 backgroundColor: stripeColor,
@@ -62,18 +189,18 @@ export default function BeltPreview({
           )}
 
           {/* Embroidered name */}
-          {embroideredName && (
-            <span
-              className="absolute inset-0 flex items-center justify-center font-bold tracking-widest uppercase"
-              style={{
-                fontSize: compact ? 8 : 11,
-                color: isWhite ? '#555' : '#fff',
-                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
-                opacity: 0.85,
-              }}
+          {embroideredName && embroideredName.trim() && (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ padding: compact ? '3px 8px' : '8px 18px' }}
             >
-              {embroideredName}
-            </span>
+              <EmbroideredName
+                name={embroideredName}
+                font={nameFont}
+                color={nameColor}
+                onLightBelt={isWhite}
+              />
+            </div>
           )}
         </div>
 
@@ -90,7 +217,7 @@ export default function BeltPreview({
           {degree > 0 && (
             <div
               className="absolute inset-0 flex items-center justify-center"
-              style={{ gap: compact ? 4 : 6 }}
+              style={{ gap: compact ? 4 : 8 }}
             >
               {Array.from({ length: degree }).map((_, i) => (
                 <div
