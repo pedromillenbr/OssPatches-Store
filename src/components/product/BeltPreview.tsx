@@ -1,8 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
+  BELT_WIDTH_CM,
+  EMBROIDERY_FIELD_ASPECT,
   EmbroideryColor,
   EmbroideryFont,
+  LETTER_FRAME_RATIO,
+  MAX_EMBROIDERY_CM,
   fontOf,
   serifFont,
   scriptFont,
@@ -29,10 +33,13 @@ type Box = { x: number; y: number; width: number; height: number };
 /**
  * Nome bordado, desenhado em SVG.
  *
- * O desenho se mede sozinho: depois que a fonte carrega, perguntamos ao
- * navegador o tamanho real das letras e recortamos o quadro em volta delas.
- * Assim o nome ocupa toda a faixa sem sobra, seja qual for a fonte — e nome
- * curto sai grande, nome longo sai menor, como na peça de verdade.
+ * A altura das letras é SEMPRE a mesma, como na produção. O que muda é a
+ * largura: o campo bordado tem 14cm e, quando o nome não cabe, as letras são
+ * apertadas para os lados em vez de diminuídas — ficam com aquele aspecto de
+ * esticadas para cima.
+ *
+ * Para saber quando apertar, o desenho se mede sozinho: depois que a fonte
+ * carrega, perguntamos ao navegador a largura real das letras.
  */
 function EmbroideredName({
   name,
@@ -55,7 +62,7 @@ function EmbroideredName({
 
   const FONT_SIZE = 100;
   // Enquadramento aproximado, usado só no primeiro instante.
-  const guessWidth = Math.max(letters.length, 4) * FONT_SIZE * spec.charWidth;
+  const guessWidth = Math.max(letters.length, 1) * FONT_SIZE * spec.charWidth;
   const baseline = spec.viewHeight * spec.baseline;
 
   useIsomorphicLayoutEffect(() => {
@@ -93,18 +100,34 @@ function EmbroideredName({
 
   if (!letters) return null;
 
-  // Folga em volta das letras — cobre também a sombra, deslocada 4 para baixo.
-  const pad = 12;
-  const view: Box = box
-    ? { x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, height: box.height + pad * 2 }
-    : { x: 0, y: 0, width: guessWidth, height: spec.viewHeight };
+  // Altura das letras e largura natural do nome, medidas ou estimadas.
+  const inkHeight = box ? box.height : FONT_SIZE * spec.capHeight;
+  const inkTop = box ? box.y : baseline - FONT_SIZE * spec.capHeight;
+  const inkWidth = box ? box.width : guessWidth;
+
+  // O campo bordado tem 14cm de largura para essa altura de letra.
+  const fieldWidth = inkHeight * EMBROIDERY_FIELD_ASPECT;
+  // Não cabendo, aperta os lados — nunca diminui a letra.
+  const squeeze = inkWidth > fieldWidth ? fieldWidth / inkWidth : 1;
+
+  const center = guessWidth / 2;
+  const view: Box = {
+    x: center - fieldWidth / 2,
+    y: inkTop,
+    width: fieldWidth,
+    height: inkHeight,
+  };
+
+  // Aperta em volta do centro, para o nome continuar centralizado na faixa.
+  const squeezeTransform =
+    squeeze < 1 ? `translate(${center} 0) scale(${squeeze} 1) translate(${-center} 0)` : '';
 
   const isGold = color === 'dourado';
   // Fio branco em faixa branca sumiria, então ganha um contorno discreto.
   const needsOutline = !isGold && onLightBelt;
 
   const textProps = {
-    x: guessWidth / 2,
+    x: center,
     y: baseline,
     textAnchor: 'middle' as const,
     fontSize: FONT_SIZE,
@@ -117,6 +140,7 @@ function EmbroideredName({
       viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
       preserveAspectRatio="xMidYMid meet"
       className="h-full w-full"
+      style={{ overflow: 'visible' }}
       role="img"
       aria-label={`Nome ${letters} bordado na faixa`}
     >
@@ -139,14 +163,24 @@ function EmbroideredName({
         </linearGradient>
       </defs>
 
+      {/* Régua invisível: medida sempre no tamanho natural, sem o aperto.
+          Medir o texto já apertado realimentaria a própria conta. */}
+      <text {...textProps} ref={textRef} visibility="hidden" aria-hidden>
+        {letters}
+      </text>
+
       {/* Sombra: dá o relevo do fio sobre o tecido. */}
-      <text {...textProps} fill="rgba(0,0,0,0.38)" transform="translate(0, 4)">
+      <text
+        {...textProps}
+        fill="rgba(0,0,0,0.38)"
+        transform={`translate(0 3) ${squeezeTransform}`.trim()}
+      >
         {letters}
       </text>
 
       <text
         {...textProps}
-        ref={textRef}
+        transform={squeezeTransform || undefined}
         fill={`url(#${gradientId})`}
         stroke={needsOutline ? 'rgba(0,0,0,0.25)' : undefined}
         strokeWidth={needsOutline ? 1.5 : undefined}
@@ -230,18 +264,25 @@ export default function BeltPreview({
             />
           )}
 
-          {/* Embroidered name */}
+          {/* Embroidered name — caixa do tamanho real do campo bordado */}
           {embroideredName && embroideredName.trim() && (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ padding: compact ? '3px 8px' : '8px 18px' }}
-            >
-              <EmbroideredName
-                name={embroideredName}
-                font={nameFont}
-                color={nameColor}
-                onLightBelt={isWhite}
-              />
+            <div className="absolute inset-0 flex items-center justify-center px-2">
+              <div
+                style={{
+                  // A faixa tem BELT_WIDTH_CM de largura, então cada cm vale
+                  // h / BELT_WIDTH_CM pixels aqui dentro.
+                  width: (h / BELT_WIDTH_CM) * MAX_EMBROIDERY_CM,
+                  height: h * LETTER_FRAME_RATIO,
+                  maxWidth: '100%',
+                }}
+              >
+                  <EmbroideredName
+                  name={embroideredName}
+                  font={nameFont}
+                  color={nameColor}
+                  onLightBelt={isWhite}
+                />
+              </div>
             </div>
           )}
         </div>

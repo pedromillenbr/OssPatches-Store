@@ -33,10 +33,12 @@ export const EMBROIDERY_FONTS: {
   cssVar: string;
   weight: number;
   /**
-   * Chute usado só no primeiro instante, antes de o desenho se medir sozinho:
-   * largura média de um caractere e altura do quadro, para uma letra de 100.
+   * Chutes usados só no primeiro instante, antes de o desenho se medir
+   * sozinho, para uma letra de tamanho 100: largura média de um caractere,
+   * altura ocupada pelas letras e onde cai a linha de base.
    */
   charWidth: number;
+  capHeight: number;
   viewHeight: number;
   baseline: number;
 }[] = [
@@ -47,6 +49,7 @@ export const EMBROIDERY_FONTS: {
     cssVar: 'var(--font-embroidery-serif)',
     weight: 700,
     charWidth: 0.72,
+    capHeight: 0.72,
     viewHeight: 120,
     baseline: 0.79,
   },
@@ -57,10 +60,27 @@ export const EMBROIDERY_FONTS: {
     cssVar: 'var(--font-embroidery-script)',
     weight: 400,
     charWidth: 0.6,
+    capHeight: 1.0,
     viewHeight: 150,
     baseline: 0.68,
   },
 ];
+
+/**
+ * Limites reais da produção.
+ *
+ * A máquina borda no máximo 14cm de largura. Quando o nome passa disso, a
+ * loja NÃO diminui a letra: ela aperta os lados, e a letra fica parecendo
+ * esticada para cima. A pré-visualização faz o mesmo.
+ */
+export const MAX_EMBROIDERY_CM = 14;
+/** Largura da faixa, usada como régua da pré-visualização. */
+export const BELT_WIDTH_CM = 4.5;
+/** Quanto da largura da faixa as letras ocupam. */
+export const LETTER_FRAME_RATIO = 0.62;
+/** Proporção do campo bordado: 14cm de largura por ~2,8cm de altura. */
+export const EMBROIDERY_FIELD_ASPECT =
+  MAX_EMBROIDERY_CM / (BELT_WIDTH_CM * LETTER_FRAME_RATIO);
 
 export const EMBROIDERY_COLORS: { id: EmbroideryColor; label: string }[] = [
   { id: 'dourado', label: 'Dourado' },

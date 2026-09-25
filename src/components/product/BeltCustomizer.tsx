@@ -232,7 +232,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
             onChange={(e) => setEmbroideredName(e.target.value.toUpperCase())}
             maxLength={30}
             required
-            hint="Até 30 caracteres — o bordado é sempre em letras maiúsculas"
+            hint="Sempre em maiúsculas. O bordado tem no máximo 14 cm, então nomes longos saem com as letras mais estreitas."
           />
 
           <div>
