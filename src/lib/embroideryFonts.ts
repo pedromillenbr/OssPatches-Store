@@ -42,15 +42,17 @@ export const EMBROIDERY_FONTS: {
    * "ç" de "Persistência"), então precisa de mais espaço na faixa.
    */
   frameRatio: number;
-  /**
-   * Chutes usados só no primeiro instante, antes de o desenho se medir
-   * sozinho, para uma letra de tamanho 100: largura média de um caractere,
-   * altura ocupada pelas letras e onde cai a linha de base.
-   */
+  /** Largura média de um caractere, em ems — chute do primeiro instante. */
   charWidth: number;
-  capHeight: number;
-  viewHeight: number;
-  baseline: number;
+  /**
+   * Onde as letras começam e terminam, em ems, contados da linha de base.
+   * NÃO dá para medir isso no navegador: o getBBox de um texto SVG devolve a
+   * caixa da fonte inteira (com o espaço reservado para acentos e caudas),
+   * não a altura real das letras. Usar aquilo fazia o bordado sair ~40%
+   * menor do que devia.
+   */
+  inkAbove: number;
+  inkBelow: number;
 }[] = [
   {
     id: 'serifada',
@@ -61,11 +63,10 @@ export const EMBROIDERY_FONTS: {
     uppercase: true,
     placeholder: 'PEDRO ALVAREZ',
     caseHint: 'A clássica é bordada sempre em MAIÚSCULAS.',
-    frameRatio: 0.375,
-    charWidth: 0.72,
-    capHeight: 0.72,
-    viewHeight: 120,
-    baseline: 0.79,
+    frameRatio: 0.4,
+    charWidth: 0.64,
+    inkAbove: 0.76,
+    inkBelow: 0.02,
   },
   {
     id: 'manuscrita',
@@ -77,10 +78,9 @@ export const EMBROIDERY_FONTS: {
     placeholder: 'Persistência',
     caseHint: 'A manuscrita é bordada do jeito que você escrever.',
     frameRatio: 0.6,
-    charWidth: 0.6,
-    capHeight: 1.0,
-    viewHeight: 150,
-    baseline: 0.68,
+    charWidth: 0.52,
+    inkAbove: 0.95,
+    inkBelow: 0.33,
   },
 ];
 

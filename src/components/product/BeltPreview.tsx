@@ -28,7 +28,7 @@ interface BeltPreviewProps {
   compact?: boolean;
 }
 
-type Box = { x: number; y: number; width: number; height: number };
+type Box = { width: number };
 
 /**
  * Nome bordado, desenhado em SVG.
@@ -61,27 +61,25 @@ function EmbroideredName({
   const [box, setBox] = useState<Box | null>(null);
 
   const FONT_SIZE = 100;
-  // Enquadramento aproximado, usado só no primeiro instante.
+  // Altura das letras: constante por fonte, NÃO medida (ver embroideryFonts.ts).
+  const inkAbove = FONT_SIZE * spec.inkAbove;
+  const inkHeight = inkAbove + FONT_SIZE * spec.inkBelow;
+  // O campo bordado tem 14cm de largura para essa altura de letra.
+  const fieldWidth = inkHeight * embroideryFieldAspect(font);
+
+  // Largura natural do nome: essa sim o navegador mede bem.
   const guessWidth = Math.max(letters.length, 1) * FONT_SIZE * spec.charWidth;
-  const baseline = spec.viewHeight * spec.baseline;
+  const naturalWidth = box ? box.width : guessWidth;
 
   useIsomorphicLayoutEffect(() => {
-    const element = textRef.current;
-    if (!element || !letters) return;
+    if (!textRef.current || !letters) return;
     let alive = true;
 
     const measure = () => {
       if (!alive || !textRef.current) return;
       try {
         const measured = textRef.current.getBBox();
-        if (measured.width > 0) {
-          setBox({
-            x: measured.x,
-            y: measured.y,
-            width: measured.width,
-            height: measured.height,
-          });
-        }
+        if (measured.width > 0) setBox({ width: measured.width });
       } catch {
         // getBBox falha se o elemento ainda não estiver renderizado; o
         // enquadramento aproximado continua valendo.
@@ -100,35 +98,22 @@ function EmbroideredName({
 
   if (!letters) return null;
 
-  // Altura das letras e largura natural do nome, medidas ou estimadas.
-  const inkHeight = box ? box.height : FONT_SIZE * spec.capHeight;
-  const inkTop = box ? box.y : baseline - FONT_SIZE * spec.capHeight;
-  const inkWidth = box ? box.width : guessWidth;
-
-  // O campo bordado tem 14cm de largura para essa altura de letra.
-  const fieldWidth = inkHeight * embroideryFieldAspect(font);
-  // Não cabendo, aperta os lados — nunca diminui a letra.
-  const squeeze = inkWidth > fieldWidth ? fieldWidth / inkWidth : 1;
-
-  const center = guessWidth / 2;
-  const view: Box = {
-    x: center - fieldWidth / 2,
-    y: inkTop,
-    width: fieldWidth,
-    height: inkHeight,
-  };
-
-  // Aperta em volta do centro, para o nome continuar centralizado na faixa.
-  const squeezeTransform =
-    squeeze < 1 ? `translate(${center} 0) scale(${squeeze} 1) translate(${-center} 0)` : '';
+  /*
+   * O quadro tem sempre a altura das letras, e a largura é a maior entre o
+   * campo de 14cm e o nome. Com preserveAspectRatio="none", o SVG estica o
+   * quadro até preencher a caixa: quando o nome passa dos 14cm, sobra largura
+   * no quadro e o desenho é comprimido na horizontal — exatamente o que a
+   * produção faz. A altura nunca muda.
+   */
+  const viewWidth = Math.max(naturalWidth, fieldWidth);
 
   const isGold = color === 'dourado';
   // Fio branco em faixa branca sumiria, então ganha um contorno discreto.
   const needsOutline = !isGold && onLightBelt;
 
   const textProps = {
-    x: center,
-    y: baseline,
+    x: 0,
+    y: inkAbove,
     textAnchor: 'middle' as const,
     fontSize: FONT_SIZE,
     fontFamily: spec.cssVar,
@@ -137,10 +122,9 @@ function EmbroideredName({
 
   return (
     <svg
-      viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
-      preserveAspectRatio="xMidYMid meet"
+      viewBox={`${-viewWidth / 2} 0 ${viewWidth} ${inkHeight}`}
+      preserveAspectRatio="none"
       className="h-full w-full"
-      style={{ overflow: 'visible' }}
       role="img"
       aria-label={`Nome ${letters} bordado na faixa`}
     >
@@ -164,24 +148,18 @@ function EmbroideredName({
         </linearGradient>
       </defs>
 
-      {/* Régua invisível: medida sempre no tamanho natural, sem o aperto.
-          Medir o texto já apertado realimentaria a própria conta. */}
+      {/* Régua invisível: mede só a largura natural do nome. */}
       <text {...textProps} ref={textRef} visibility="hidden" aria-hidden>
         {letters}
       </text>
 
       {/* Sombra: dá o relevo do fio sobre o tecido. */}
-      <text
-        {...textProps}
-        fill="rgba(0,0,0,0.38)"
-        transform={`translate(0 3) ${squeezeTransform}`.trim()}
-      >
+      <text {...textProps} fill="rgba(0,0,0,0.38)" transform="translate(0 3)">
         {letters}
       </text>
 
       <text
         {...textProps}
-        transform={squeezeTransform || undefined}
         fill={`url(#${gradientId})`}
         stroke={needsOutline ? 'rgba(0,0,0,0.25)' : undefined}
         strokeWidth={needsOutline ? 1.5 : undefined}
