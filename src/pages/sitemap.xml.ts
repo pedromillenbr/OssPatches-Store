@@ -2,11 +2,17 @@ import { GetServerSideProps } from 'next';
 import { getAllSlugs } from '@/services/products';
 import { CONFIG } from '@/config';
 
+// Só entram páginas que existem de verdade: uma URL listada aqui sem página
+// correspondente vira erro 404 no Google Search Console e derruba a confiança
+// do site no buscador.
 const STATIC_PAGES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/quem-somos', priority: '0.6', changefreq: 'monthly' },
   { path: '/nossos-atletas', priority: '0.5', changefreq: 'monthly' },
-  { path: '/nossos-parceiros', priority: '0.5', changefreq: 'monthly' },
+  { path: '/envios', priority: '0.5', changefreq: 'monthly' },
+  { path: '/trocas-e-devolucoes', priority: '0.4', changefreq: 'yearly' },
+  { path: '/termos-de-uso', priority: '0.3', changefreq: 'yearly' },
+  { path: '/politica-de-privacidade', priority: '0.3', changefreq: 'yearly' },
 ];
 
 function buildSitemap(urls: { loc: string; priority: string; changefreq: string; lastmod: string }[]) {
