@@ -55,8 +55,32 @@ export async function recordOrderForUser(input: RecordOrderInput): Promise<void>
       { onConflict: 'order_ref' }
     );
 
-    if (error) console.error('recordOrderForUser:', error.message);
+    if (error) {
+      console.error('recordOrderForUser:', error.message);
+      return;
+    }
+
+    // O pedido nasce sempre "pending". Se o pagamento já foi aprovado na hora
+    // (cartão e PayPal), pedimos ao servidor para confirmar — assim o cliente
+    // não vê "Aguardando pagamento" numa compra que já foi paga.
+    await syncOrderPaymentStatus(input.orderRef);
   } catch (err) {
     console.error('recordOrderForUser (inesperado):', err);
+  }
+}
+
+/**
+ * Pede ao servidor que confira o pagamento e confirme o pedido na conta.
+ * Silencioso de propósito: se falhar, o webhook do gateway corrige depois.
+ */
+async function syncOrderPaymentStatus(orderRef: string): Promise<void> {
+  try {
+    await fetch('/api/orders/sync-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderRef }),
+    });
+  } catch {
+    /* sem rede ou servidor fora — o webhook resolve */
   }
 }

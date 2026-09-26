@@ -4,6 +4,7 @@ import { updateOrderStatusInSheet, getOrderFromSheet } from '@/services/googleSh
 import { sendPaymentConfirmedEmail } from '@/services/email';
 import { Order } from '@/types';
 import { settlePixUse } from '@/lib/couponUsage';
+import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
 
 function validateSignature(req: NextApiRequest, secret: string): boolean {
   const xSignature = req.headers['x-signature'] as string;
@@ -106,6 +107,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // webhook não contam o mesmo pedido duas vezes.
       if (status === 'approved') {
         await settlePixUse(orderId);
+
+        // A planilha é o controle interno; o cliente logado acompanha o pedido
+        // pela conta dele. Sem esta linha ele continuaria vendo "Aguardando
+        // pagamento" depois de pagar, até alguém corrigir na mão no /admin.
+        await markOrderPaidInDb(orderId);
       }
 
       if (status === 'approved' && !wasAlreadyApproved && existingOrder?.customer?.email) {
