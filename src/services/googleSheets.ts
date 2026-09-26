@@ -217,6 +217,11 @@ const CLOSING: SheetColumn[] = [
   // Coluna do dono da loja: nasce vazia e o sistema nunca mais escreve nela.
   // Serve para acompanhar o envio sem mexer no Status, que o webhook lê.
   { key: 'shipping', header: 'Envio', options: SHIPPING_OPTIONS, value: () => '' },
+  // Também preenchida à mão. É o que o cliente sem conta vê em /rastrear, e
+  // por isso é o único jeito de dar rastreio a quem comprou como convidado
+  // (pedido de convidado não existe no Banco de Dados). Aceita o código puro
+  // ou a URL completa da transportadora — a página trata os dois casos.
+  { key: 'tracking', header: 'Rastreio', value: () => '' },
 ];
 
 const PATCH_COLUMNS: SheetColumn[] = [
@@ -483,9 +488,19 @@ export async function appendOrderToSheet(order: Order): Promise<void> {
   }
 }
 
+/** Campos que só existem na planilha, fora do tipo Order. */
+export interface SheetOrderExtras {
+  /** Status cru do gateway ('approved', 'pending'…), usado para idempotência. */
+  gatewayStatus?: string;
+  /** Coluna "Envio", preenchida à mão: 'Postado', 'A caminho'… */
+  shippingStage?: string;
+  /** Coluna "Rastreio": código da transportadora ou URL completa. */
+  tracking?: string;
+}
+
 export async function getOrderFromSheet(
   orderId: string
-): Promise<(Partial<Order> & { gatewayStatus?: string }) | null> {
+): Promise<(Partial<Order> & SheetOrderExtras) | null> {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   if (!spreadsheetId) return null;
 
@@ -544,7 +559,10 @@ export async function getOrderFromSheet(
         status: rawStatus === 'approved' ? 'confirmed' : 'pending',
         // Status cru do gateway, usado para idempotência no webhook.
         gatewayStatus: rawStatus,
-      } as Partial<Order> & { gatewayStatus: string };
+        // Colunas preenchidas à mão pelo dono, exibidas em /rastrear.
+        shippingStage: cell('shipping'),
+        tracking: cell('tracking'),
+      } as Partial<Order> & SheetOrderExtras;
     }
 
     return null;

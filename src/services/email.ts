@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { Order } from '@/types';
+import { CONFIG } from '@/config';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 // Remetente da loja. Enquanto o domínio não estiver verificado na Resend, o
@@ -13,6 +14,23 @@ const REPLY_TO = process.env.RESEND_REPLY_TO || 'osspatches@gmail.com';
 
 function formatPrice(value: number, currency = 'BRL'): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value);
+}
+
+/**
+ * Botão de acompanhamento. Quem compra sem conta não tem "Meus pedidos", então
+ * este link do e-mail é o caminho dessa pessoa para saber do pedido sozinha.
+ */
+function trackingCta(): string {
+  const url = `${CONFIG.siteUrl}/rastrear`;
+  return `
+    <div style="margin-top:28px;text-align:center">
+      <a href="${url}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px">
+        Acompanhar meu pedido
+      </a>
+      <p style="margin:10px 0 0;font-size:13px;color:#888">
+        Use o número do pedido acima e este e-mail.
+      </p>
+    </div>`;
 }
 
 /**
@@ -159,7 +177,9 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
           ? 'Aguardando confirmação do Pix. Assim que identificarmos o pagamento, você receberá um novo e-mail.'
           : 'Seu pedido está confirmado. Entraremos em contato assim que for enviado.'}
       </p>
-    </div>`;
+    </div>
+
+    ${trackingCta()}`;
 
   await resend.emails.send({
     from: FROM,
@@ -203,7 +223,9 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
         2. Prazo de envio: até 3 dias úteis<br>
         3. Você receberá o código de rastreio por e-mail
       </p>
-    </div>`;
+    </div>
+
+    ${trackingCta()}`;
 
   await resend.emails.send({
     from: FROM,

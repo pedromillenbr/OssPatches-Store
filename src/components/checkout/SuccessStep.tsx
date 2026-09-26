@@ -89,6 +89,22 @@ export default function SuccessStep() {
             Continuar comprando
           </Button>
         </Link>
+
+        {/*
+          Quem comprou sem conta não tem "Meus pedidos" — sem este caminho, a
+          única forma de saber do pedido seria chamar no WhatsApp.
+        */}
+        <p className="text-sm text-brand-gray-500">
+          Guarde o número do pedido: você acompanha tudo em{' '}
+          <Link
+            href="/rastrear"
+            onClick={() => reset()}
+            className="font-semibold text-brand-black underline underline-offset-2"
+          >
+            Rastrear pedido
+          </Link>
+          .
+        </p>
       </div>
 
       {/* OSS */}

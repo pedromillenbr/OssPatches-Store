@@ -72,6 +72,9 @@ const LIMITS: Record<string, LimiterConfig> = {
   shipping:     { requests: 20, window: '1 m'  }, // 20 CEP lookups per IP per min
   coupons:      { requests: 10, window: '1 m'  }, // 10 attempts — prevents brute-force
   'order-status': { requests: 30, window: '1 m' }, // PIX polling
+  // Consulta pública em /rastrear. Curto de propósito: é a única rota que
+  // devolve dado de pedido só com número + e-mail.
+  'order-track': { requests: 10, window: '5 m' },
 };
 
 // ---------------------------------------------------------------------------

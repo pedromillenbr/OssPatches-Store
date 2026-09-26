@@ -415,6 +415,9 @@ function MobileMenu({ open, onClose, isLogged, isAdmin, onSignOut }: MobileMenuP
             <MenuLink href="/envios" onClick={onClose}>
               Política de Envios
             </MenuLink>
+            <MenuLink href="/rastrear" onClick={onClose}>
+              Rastrear pedido
+            </MenuLink>
           </MenuGroup>
 
           <MenuGroup title="Minha conta">

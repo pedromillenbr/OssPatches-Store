@@ -58,6 +58,24 @@ export function timelineIndex(status: string): number {
   return rank - 1; // confirmed(1) → 0, delivered(4) → 3
 }
 
+/**
+ * Traduz a coluna "Envio" da planilha (preenchida à mão pela loja) para o
+ * status do pedido, para o cliente sem conta ver a mesma linha do tempo de
+ * quem tem conta. O pagamento manda: enquanto não está pago, nada avança.
+ */
+const STAGE_TO_STATUS: Record<string, OrderStatus> = {
+  'A produzir': 'confirmed',
+  'Em produção': 'processing',
+  Postado: 'shipped',
+  'A caminho': 'shipped',
+  Entregue: 'delivered',
+};
+
+export function statusFromShippingStage(status: string, stage?: string): string {
+  if (status !== 'confirmed') return status;
+  return STAGE_TO_STATUS[(stage ?? '').trim()] ?? status;
+}
+
 /** Todos os status possíveis, para o painel de admin. */
 export const ALL_STATUSES: OrderStatus[] = [
   'pending',
