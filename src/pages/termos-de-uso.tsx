@@ -48,9 +48,11 @@ export default function TermosDeUsoPage() {
                 <strong>CNPJ:</strong> {COMPANY.cnpj}
               </li>
             )}
-            <li>
-              <strong>Endereço:</strong> {companyAddressLine()}
-            </li>
+            {companyAddressLine() && (
+              <li>
+                <strong>Endereço:</strong> {companyAddressLine()}
+              </li>
+            )}
             <li>
               <strong>Atendimento:</strong> {mail}
             </li>

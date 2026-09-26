@@ -100,6 +100,14 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
+                  href="/rastrear"
+                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
+                >
+                  Rastrear pedido
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/envios"
                   className="text-sm text-brand-gray-400 hover:text-white transition-colors"
                 >
@@ -153,7 +161,7 @@ export default function Footer() {
           <address className="text-xs not-italic leading-relaxed text-brand-gray-500 space-y-1">
             {COMPANY.legalName && <p>{COMPANY.legalName}</p>}
             {COMPANY.cnpj && <p>CNPJ {COMPANY.cnpj}</p>}
-            <p>{companyAddressLine()}</p>
+            {companyAddressLine() && <p>{companyAddressLine()}</p>}
             <p>
               <a
                 href={`mailto:${COMPANY.email}`}

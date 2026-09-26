@@ -6,25 +6,27 @@
  * destaque no site. Centralizamos aqui para que o rodapé e as páginas legais
  * mostrem sempre a mesma informação.
  *
- * Campos vazios simplesmente não são exibidos — melhor omitir do que publicar
- * um dado errado. PREENCHER `legalName` e `cnpj` antes de divulgar a loja.
+ * TODO (pedido do dono, 26/09/2026): razão social, CNPJ e endereço estão
+ * ocultos por enquanto — campo vazio simplesmente não é renderizado. Preencher
+ * antes de anunciar a loja, para ficar em dia com o decreto. O endereço físico
+ * da operação é o mesmo `originCEP` de src/config/index.ts.
  */
 export const COMPANY = {
   /** Nome fantasia, usado nos textos. */
   tradeName: 'OssPatches',
 
-  /** Razão social registrada. Deixe vazio até confirmar. */
+  /** Razão social registrada. Vazio = não aparece. */
   legalName: '',
 
   /** Somente números ou já formatado — exibido como está. Vazio = não aparece. */
   cnpj: '',
 
-  /** Endereço físico. */
+  /** Endereço físico. Rua vazia = o endereço inteiro não aparece. */
   address: {
-    street: 'Avenida das Américas, 17300',
-    city: 'Rio de Janeiro',
-    state: 'RJ',
-    zipCode: '22790-701',
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
     country: 'Brasil',
   },
 
@@ -38,10 +40,12 @@ export const COMPANY = {
   jurisdiction: 'Rio de Janeiro/RJ',
 } as const;
 
-/** Endereço numa linha só, para o rodapé. */
+/** Endereço numa linha só, para o rodapé. String vazia quando não preenchido. */
 export function companyAddressLine(): string {
   const { street, city, state, zipCode } = COMPANY.address;
-  return `${street} — ${city}/${state} — CEP ${zipCode}`;
+  if (!street) return '';
+  const place = [city, state].filter(Boolean).join('/');
+  return [street, place, zipCode && `CEP ${zipCode}`].filter(Boolean).join(' — ');
 }
 
 /** WhatsApp formatado para leitura: +55 (21) 98247-9922 */
