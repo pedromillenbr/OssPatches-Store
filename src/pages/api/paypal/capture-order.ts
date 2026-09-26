@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { capturePayPalOrder } from '@/services/paypal';
 import { appendOrderToSheet } from '@/services/googleSheets';
+import { markCartRecovered } from '@/lib/abandonedCart';
 import { sendOrderConfirmationEmail } from '@/services/email';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
@@ -106,6 +107,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (err) {
       console.error('Google Sheets error:', err);
     }
+
+    // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
+    await markCartRecovered(order.customer.email);
 
     if (suspicious) {
       console.error(`[paypal] Pagamento divergente no pedido ${ossOrderId}: ${order.notes}`);

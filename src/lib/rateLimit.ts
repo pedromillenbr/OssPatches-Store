@@ -75,6 +75,11 @@ const LIMITS: Record<string, LimiterConfig> = {
   // Consulta pública em /rastrear. Curto de propósito: é a única rota que
   // devolve dado de pedido só com número + e-mail.
   'order-track': { requests: 10, window: '5 m' },
+  // Salvar carrinho abandonado. O e-mail vem do navegador, então este limite
+  // é o que impede alguém de usar a rota para disparar lembrete a estranhos.
+  'cart-save': { requests: 5, window: '10 m' },
+  // Restaurar/descadastrar pelo token do e-mail.
+  'cart-restore': { requests: 20, window: '5 m' },
 };
 
 // ---------------------------------------------------------------------------

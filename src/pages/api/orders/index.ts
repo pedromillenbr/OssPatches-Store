@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Order } from '@/types';
 import { appendOrderToSheet } from '@/services/googleSheets';
+import { markCartRecovered } from '@/lib/abandonedCart';
 import { sendOrderConfirmationEmail } from '@/services/email';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
@@ -170,6 +171,9 @@ export default async function handler(
   } catch (err) {
     console.error('Google Sheets error:', err);
   }
+
+  // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
+  await markCartRecovered(order.customer.email);
 
   // Send confirmation email (non-fatal)
   sendOrderConfirmationEmail(order).catch((err) =>

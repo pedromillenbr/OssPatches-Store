@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { appendOrderToSheet } from '@/services/googleSheets';
+import { markCartRecovered } from '@/lib/abandonedCart';
 import { sendOrderConfirmationEmail } from '@/services/email';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
@@ -168,6 +169,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try { await appendOrderToSheet(order); } catch (err) { console.error('Sheets error:', err); }
+  // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
+  await markCartRecovered(order.customer.email);
   sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));
 
   return res.status(201).json({

@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { Order } from '@/types';
+import { Order, CartItem } from '@/types';
 import { CONFIG } from '@/config';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -232,6 +232,83 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
     replyTo: REPLY_TO,
     to: order.customer.email,
     subject: `Pagamento confirmado — Pedido ${order.id}`,
+    html: baseLayout(content),
+  });
+}
+
+/**
+ * Lembrete de carrinho abandonado. Um por carrinho, sem desconto: a ideia é
+ * lembrar de algo que a pessoa escolheu, não comprar a venda de volta.
+ *
+ * O link de descadastro não é enfeite — sem ele, o lembrete vira spam, e
+ * marcação de spam derruba a entrega dos e-mails de pedido também.
+ */
+export async function sendAbandonedCartEmail(input: {
+  email: string;
+  firstName?: string | null;
+  items: CartItem[];
+  subtotal: number;
+  currency: string;
+  token: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const greeting = input.firstName ? `, ${esc(input.firstName)}` : '';
+  const backUrl = `${CONFIG.siteUrl}/recuperar?t=${encodeURIComponent(input.token)}`;
+  const outUrl = `${CONFIG.siteUrl}/descadastrar?t=${encodeURIComponent(input.token)}`;
+
+  const rows = input.items
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333">
+            ${esc(item.name)}${item.quantity > 1 ? ` <span style="color:#888">×${esc(item.quantity)}</span>` : ''}
+          </td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right">
+            ${formatPrice(item.price * item.quantity, input.currency)}
+          </td>
+        </tr>`
+    )
+    .join('');
+
+  const content = `
+    <h1 style="margin:0 0 8px;font-size:24px;color:#000">Você esqueceu algo no carrinho${greeting}</h1>
+    <p style="margin:0 0 24px;color:#555;font-size:15px">
+      Suas peças continuam guardadas. É só voltar de onde parou — em um clique o carrinho volta montado.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${rows}
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">
+      <tr>
+        <td style="padding:12px 0 0;font-size:16px;font-weight:700;color:#000;border-top:2px solid #000">Subtotal</td>
+        <td style="padding:12px 0 0;font-size:16px;font-weight:700;color:#000;text-align:right;border-top:2px solid #000">${formatPrice(input.subtotal, input.currency)}</td>
+      </tr>
+    </table>
+
+    <div style="margin-top:28px;text-align:center">
+      <a href="${backUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px">
+        Voltar para o meu carrinho
+      </a>
+    </div>
+
+    <p style="margin:28px 0 0;font-size:13px;color:#888;line-height:1.7">
+      Cada faixa e cada patch é produzido sob encomenda por aqui, um a um.
+      Qualquer dúvida sobre tamanho ou personalização, é só responder este e-mail.
+    </p>
+
+    <p style="margin:20px 0 0;font-size:12px;color:#aaa;text-align:center">
+      Não quer mais receber lembretes?
+      <a href="${outUrl}" style="color:#888">Cancelar</a>.
+    </p>`;
+
+  await resend.emails.send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to: input.email,
+    subject: 'Suas peças ainda estão no carrinho — OssPatches',
     html: baseLayout(content),
   });
 }

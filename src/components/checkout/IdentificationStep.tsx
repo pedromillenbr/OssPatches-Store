@@ -8,6 +8,7 @@ import { formatPhoneBR, isValidPhoneBR } from '@/lib/phone';
 import { checkEmail, normalizeEmail } from '@/lib/email';
 import { useAuth } from '@/context/AuthContext';
 import { saveIdentificationToProfile } from '@/lib/saveCheckoutProfile';
+import { saveCartForRecovery } from '@/lib/saveCartForRecovery';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -80,6 +81,10 @@ export default function IdentificationStep() {
     setCustomer(customer);
     // Salva no perfil (se logado) para a próxima compra vir pronta.
     saveIdentificationToProfile(customer);
+    // Este é o primeiro (e muitas vezes o único) momento em que sabemos o
+    // e-mail de quem está comprando. Se a pessoa sumir daqui em diante, é o
+    // que permite mandar o lembrete do carrinho.
+    saveCartForRecovery(customer);
     setStep('address');
   };
 

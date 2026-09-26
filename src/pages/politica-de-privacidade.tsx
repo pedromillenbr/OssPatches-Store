@@ -72,6 +72,13 @@ export default function PoliticaDePrivacidadePage() {
             <li>Processar, produzir e entregar seus pedidos.</li>
             <li>Calcular frete e emitir etiquetas de envio.</li>
             <li>Enviar confirmações e atualizações sobre seus pedidos.</li>
+            <li>
+              Lembrar você de um carrinho que ficou para trás. Se você informar seu
+              e-mail no checkout e não concluir a compra, guardamos o que estava no
+              carrinho e enviamos <strong>um único</strong> lembrete. Todo lembrete
+              traz um link para cancelar, e cancelar não afeta os e-mails sobre
+              pedidos que você já fez.
+            </li>
             <li>Manter sua conta, histórico de pedidos e lista de interesses.</li>
             <li>Melhorar o site e entender como ele é usado.</li>
             <li>Cumprir obrigações legais e fiscais.</li>
@@ -83,9 +90,11 @@ export default function PoliticaDePrivacidadePage() {
             Tratamos seus dados com base na <strong>execução do contrato</strong> de
             compra e venda, no <strong>cumprimento de obrigações legais</strong>
             (fiscais e de defesa do consumidor), no nosso{' '}
-            <strong>legítimo interesse</strong> de melhorar o serviço e prevenir
-            fraudes e, quando aplicável, no seu <strong>consentimento</strong> (por
-            exemplo, para cookies de análise).
+            <strong>legítimo interesse</strong> de melhorar o serviço, prevenir
+            fraudes e retomar uma compra que você mesmo iniciou (o lembrete de
+            carrinho, que você pode cancelar a qualquer momento) e, quando
+            aplicável, no seu <strong>consentimento</strong> (por exemplo, para
+            cookies de análise).
           </p>
         </Section>
 
@@ -130,7 +139,8 @@ export default function PoliticaDePrivacidadePage() {
           <p>
             Mantemos seus dados enquanto sua conta existir e pelo prazo exigido por
             lei (por exemplo, obrigações fiscais). Depois disso, os dados são
-            apagados ou anonimizados.
+            apagados ou anonimizados. O carrinho guardado para o lembrete deixa de
+            ser usado depois de 48 horas.
           </p>
         </Section>
 
