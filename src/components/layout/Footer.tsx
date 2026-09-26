@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { COMPANY, companyAddressLine } from '@/config/company';
 
 export default function Footer() {
   return (
@@ -107,10 +108,26 @@ export default function Footer() {
               </li>
               <li>
                 <Link
+                  href="/trocas-e-devolucoes"
+                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
+                >
+                  Trocas e Devoluções
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/politica-de-privacidade"
                   className="text-sm text-brand-gray-400 hover:text-white transition-colors"
                 >
                   Política de Privacidade
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/termos-de-uso"
+                  className="text-sm text-brand-gray-400 hover:text-white transition-colors"
+                >
+                  Termos de Uso
                 </Link>
               </li>
               <li>
@@ -127,14 +144,35 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-brand-gray-800 mt-10 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-brand-gray-500">
-            © {new Date().getFullYear()} OssPatches. Todos os direitos
-            reservados.
-          </p>
-          <p className="text-xs text-brand-gray-600">
-            Produção nacional • Envio mundial • Qualidade premium
-          </p>
+        {/*
+          Identificação da empresa. O Decreto 7.962/2013 exige nome empresarial,
+          CNPJ e endereço físico e eletrônico visíveis no site. Cada dado só
+          aparece quando está preenchido em src/config/company.ts.
+        */}
+        <div className="border-t border-brand-gray-800 mt-10 sm:mt-12 pt-6 sm:pt-8">
+          <address className="text-xs not-italic leading-relaxed text-brand-gray-500 space-y-1">
+            {COMPANY.legalName && <p>{COMPANY.legalName}</p>}
+            {COMPANY.cnpj && <p>CNPJ {COMPANY.cnpj}</p>}
+            <p>{companyAddressLine()}</p>
+            <p>
+              <a
+                href={`mailto:${COMPANY.email}`}
+                className="hover:text-white transition-colors"
+              >
+                {COMPANY.email}
+              </a>
+            </p>
+          </address>
+
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-brand-gray-500">
+              © {new Date().getFullYear()} OssPatches. Todos os direitos
+              reservados.
+            </p>
+            <p className="text-xs text-brand-gray-600">
+              Produção nacional • Envio mundial • Qualidade premium
+            </p>
+          </div>
         </div>
       </div>
     </footer>
