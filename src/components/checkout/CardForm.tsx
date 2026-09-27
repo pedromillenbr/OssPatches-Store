@@ -219,8 +219,13 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
       const pmResult = await mp.getPaymentMethods({ bin });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const methods: any[] = pmResult?.results ?? [];
-      const wantedType = isDebit ? 'debit_card' : 'credit_card';
-      const method = methods.find((m) => m.payment_type_id === wantedType);
+      // No crédito também aceitamos cartão pré-pago (vale, cartões virtuais de
+      // benefício): o Mercado Pago classifica como "prepaid_card", mas a
+      // cobrança é igual à do crédito à vista.
+      const wantedTypes = isDebit ? ['debit_card'] : ['credit_card', 'prepaid_card'];
+      const method = wantedTypes
+        .map((type) => methods.find((m) => m.payment_type_id === type))
+        .find(Boolean);
 
       if (!method) {
         toast.error(
