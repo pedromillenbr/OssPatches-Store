@@ -534,6 +534,7 @@ export default function PaymentStep() {
           <CardForm
             total={total}
             isDebit={selectedMethod === 'debit_card'}
+            cpf={customer?.cpf}
             onSubmit={handleCardSubmit}
             loading={cardLoading}
           />

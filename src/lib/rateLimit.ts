@@ -68,6 +68,10 @@ function getLimiter(key: string, redisClient: Redis, config: LimiterConfig): Rat
 // ---------------------------------------------------------------------------
 const LIMITS: Record<string, LimiterConfig> = {
   orders:       { requests: 5,  window: '10 m' }, // 5 orders per IP per 10 min
+  // Cartão tem seu próprio balde: uma recusa do banco (CVV errado, limite,
+  // antifraude) é normal e o cliente precisa poder tentar de novo sem ficar
+  // travado pelo limite compartilhado com o Pix.
+  'card-payment': { requests: 8, window: '10 m' },
   paypal:       { requests: 10, window: '10 m' }, // PayPal create/capture per IP
   shipping:     { requests: 20, window: '1 m'  }, // 20 CEP lookups per IP per min
   coupons:      { requests: 10, window: '1 m'  }, // 10 attempts — prevents brute-force

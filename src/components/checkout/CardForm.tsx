@@ -25,6 +25,9 @@ interface CardFormFields {
 interface CardFormProps {
   total: number;
   isDebit?: boolean;
+  /** CPF do titular (vem da etapa de identificação). O Mercado Pago exige o
+   *  documento do portador para gerar o token de qualquer cartão no Brasil. */
+  cpf?: string;
   onSubmit: (payload: {
     cardToken: string;
     paymentMethodId: string;
@@ -66,6 +69,36 @@ function detectBrand(number: string): string {
   return '';
 }
 
+// Mensagens do SDK do Mercado Pago vêm como lista de códigos. Traduzimos os
+// mais comuns para o cliente saber exatamente qual campo corrigir.
+const TOKEN_ERROR_MESSAGES: Record<string, string> = {
+  '205': 'Digite o número do cartão.',
+  '208': 'Digite o mês de validade.',
+  '209': 'Digite o ano de validade.',
+  '212': 'Informe o CPF do titular.',
+  '214': 'Informe o CPF do titular.',
+  '221': 'Digite o nome do titular como está no cartão.',
+  '224': 'Digite o código de segurança (CVV).',
+  'E301': 'Número de cartão inválido.',
+  'E302': 'Código de segurança (CVV) inválido.',
+  '316': 'Nome do titular inválido.',
+  '322': 'CPF inválido.',
+  '324': 'CPF inválido.',
+  '325': 'Mês de validade inválido.',
+  '326': 'Ano de validade inválido.',
+};
+
+function tokenErrorMessage(err: unknown): string {
+  const causes = (err as { cause?: { code?: string | number }[] })?.cause;
+  if (Array.isArray(causes)) {
+    for (const c of causes) {
+      const msg = TOKEN_ERROR_MESSAGES[String(c?.code)];
+      if (msg) return msg;
+    }
+  }
+  return 'Erro ao processar cartão. Verifique os dados e tente novamente.';
+}
+
 const BRAND_COLORS: Record<string, string> = {
   visa: '#1A1F71',
   mastercard: '#EB001B',
@@ -73,7 +106,7 @@ const BRAND_COLORS: Record<string, string> = {
   hipercard: '#B90000',
 };
 
-export default function CardForm({ total, isDebit = false, onSubmit, loading }: CardFormProps) {
+export default function CardForm({ total, isDebit = false, cpf, onSubmit, loading }: CardFormProps) {
   const [mpReady, setMpReady] = useState(false);
   const [cardBrand, setCardBrand] = useState('');
   const [cardNumberDisplay, setCardNumberDisplay] = useState('');
@@ -109,7 +142,7 @@ export default function CardForm({ total, isDebit = false, onSubmit, loading }: 
     setLoadingInstallments(true);
     const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
 
-    mp.getInstallments({ amount: String(total), bin, paymentTypeId: 'credit_card' })
+    mp.getInstallments({ amount: total.toFixed(2), bin, paymentTypeId: 'credit_card' })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((res: any) => {
         if (cancelled) return;
@@ -151,42 +184,67 @@ export default function CardForm({ total, isDebit = false, onSubmit, loading }: 
       return;
     }
 
+    // Sem CPF o Mercado Pago recusa a geração do token (todas as bandeiras
+    // brasileiras pedem cardholder_identification_number).
+    const cpfDigits = (cpf || '').replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      toast.error('Informe o CPF na etapa de identificação para pagar com cartão.');
+      return;
+    }
+
     const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
+    const bin = data.cardNumber.replace(/\s/g, '').substring(0, 6);
 
     try {
-      // Tokenize card data — number never leaves the browser raw
+      // Tokenize card data — number never leaves the browser raw.
+      // identificationType/Number são obrigatórios no Brasil.
       const tokenResult = await mp.createCardToken({
         cardNumber: data.cardNumber.replace(/\s/g, ''),
         cardholderName: data.cardName,
         cardExpirationMonth: data.expiryMonth.padStart(2, '0'),
         cardExpirationYear: data.expiryYear.length === 2 ? `20${data.expiryYear}` : data.expiryYear,
         securityCode: data.cvv,
+        identificationType: 'CPF',
+        identificationNumber: cpfDigits,
       });
 
-      if (tokenResult.error) {
+      if (!tokenResult?.id || tokenResult.error) {
         toast.error('Dados do cartão inválidos. Verifique e tente novamente.');
         return;
       }
 
-      // Get payment method and issuer
-      const pmResult = await mp.getPaymentMethods({ bin: data.cardNumber.replace(/\s/g, '').substring(0, 6) });
-      const paymentMethodId = pmResult?.results?.[0]?.id || cardBrand;
-      const issuerId = pmResult?.results?.[0]?.issuer?.id;
+      // Get payment method and issuer. O BIN pode devolver a versão de crédito
+      // E a de débito do mesmo cartão — precisamos da que o cliente escolheu,
+      // senão o Mercado Pago recusa o pagamento.
+      const pmResult = await mp.getPaymentMethods({ bin });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const methods: any[] = pmResult?.results ?? [];
+      const wantedType = isDebit ? 'debit_card' : 'credit_card';
+      const method = methods.find((m) => m.payment_type_id === wantedType);
+
+      if (!method) {
+        toast.error(
+          isDebit
+            ? 'Este cartão não é aceito no débito. Tente no crédito ou pague com Pix.'
+            : 'Não foi possível identificar a bandeira do cartão. Confira o número.'
+        );
+        return;
+      }
 
       await onSubmit({
         cardToken: tokenResult.id,
-        paymentMethodId,
-        issuerId,
+        paymentMethodId: method.id,
+        issuerId: method.issuer?.id,
         installments: isDebit ? 1 : Number(data.installments),
       });
     } catch (err) {
       console.error('Card tokenization error:', err);
-      // Try axios for friendly API error
+      // Erro vindo da nossa API (axios) — já vem em português.
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         toast.error(err.response.data.error);
-      } else {
-        toast.error('Erro ao processar cartão. Verifique os dados e tente novamente.');
+        return;
       }
+      toast.error(tokenErrorMessage(err));
     }
   };
 

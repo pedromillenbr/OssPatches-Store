@@ -15,7 +15,7 @@ import type { Order } from '@/types';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (handleCors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (await rejectIfRateLimited('orders', req, res)) return;
+  if (await rejectIfRateLimited('card-payment', req, res)) return;
   if (isBodyTooLarge(req, 50 * 1024)) return res.status(413).json({ error: 'Requisição muito grande' });
 
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -145,7 +145,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     address,
     shipping: cleanShippingLabel(shipping, serverShipping),
     payment: {
-      method: paymentMethodId.startsWith('debit') ? 'debit_card' : 'credit_card',
+      // IDs de débito do Mercado Pago começam com "deb" (debelo, debvisa,
+      // debmaster) — nunca com "debit".
+      method: /^deb/.test(paymentMethodId) ? 'debit_card' : 'credit_card',
       installments: installmentCount,
     },
     subtotal: serverSubtotal,
