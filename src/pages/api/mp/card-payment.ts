@@ -93,6 +93,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
     external_reference: orderId,
     statement_descriptor: 'OSSPATCHES',
+    // 3DS 2.0 ("Verified by Visa"/"Mastercard Identity Check"). Em "optional" o
+    // Mercado Pago só pede a confirmação do banco quando a transação é de
+    // risco; nos demais casos o fluxo continua igual ao de antes.
+    three_d_secure_mode: 'optional',
   };
 
   let mpResponse: Record<string, unknown>;
@@ -120,6 +124,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const mpStatus = String(mpResponse.status);
+  const mpPaymentId = String(mpResponse.id ?? '');
+
+  // 3DS: o banco quer autenticar o titular. O pagamento fica "pending" até o
+  // cliente concluir o desafio (~5 min) na janela do próprio banco.
+  const threeDs = (mpResponse.three_ds_info ?? {}) as { external_resource_url?: string; creq?: string };
+  const needsChallenge =
+    mpStatus === 'pending' &&
+    String(mpResponse.status_detail) === 'pending_challenge' &&
+    typeof threeDs.external_resource_url === 'string' &&
+    typeof threeDs.creq === 'string';
 
   // rejected — inform user with MP's reason
   if (mpStatus === 'rejected') {
@@ -179,6 +193,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     orderId,
     status: order.status,
     mpStatus,
-    message: mpStatus === 'approved' ? 'Pagamento aprovado!' : 'Pagamento em análise.',
+    mpPaymentId,
+    ...(needsChallenge
+      ? {
+          challenge: {
+            externalResourceUrl: threeDs.external_resource_url,
+            creq: threeDs.creq,
+          },
+        }
+      : {}),
+    message: mpStatus === 'approved'
+      ? 'Pagamento aprovado!'
+      : needsChallenge
+        ? 'Confirme o pagamento com seu banco.'
+        : 'Pagamento em análise.',
   });
 }

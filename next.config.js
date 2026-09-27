@@ -44,10 +44,17 @@ const nextConfig = {
       `font-src 'self' data: ${fontDomains}`,
       `img-src 'self' data: blob: https: http:`,
       `connect-src 'self' ${mpDomains} ${gaDomains} ${supabaseDomains} https://viacep.com.br https://sandbox.melhorenvio.com.br https://melhorenvio.com.br https://api.resend.com`,
-      `frame-src 'self' ${mpDomains}`,
+      // O desafio 3DS ("Verified by Visa") abre um iframe no domínio do BANCO
+      // emissor — e cada banco usa o seu. Não existe lista publicada, então
+      // liberamos https:. O iframe é criado pelo nosso código, a partir da URL
+      // que o Mercado Pago devolve em three_ds_info.external_resource_url.
+      `frame-src 'self' https: ${mpDomains}`,
       `object-src 'none'`,
       `base-uri 'self'`,
-      `form-action 'self'`,
+      // O formulário do desafio é montado dentro daquele iframe (about:blank,
+      // que herda esta CSP) e enviado por POST ao banco. Com 'self' o
+      // navegador bloquearia o envio e a autenticação nunca abriria.
+      `form-action 'self' https:`,
       `upgrade-insecure-requests`,
     ].join('; ');
 

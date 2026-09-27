@@ -37,8 +37,13 @@ export default async function handler(
 
     const data = await mpRes.json();
 
-    // approved = pago, pending = aguardando, cancelled/rejected = falhou
-    return res.status(200).json({ status: data.status as string });
+    // approved = pago, pending = aguardando, cancelled/rejected = falhou.
+    // statusDetail distingue o 3DS ainda em andamento (pending_challenge) de
+    // outros "pending".
+    return res.status(200).json({
+      status: data.status as string,
+      statusDetail: (data.status_detail ?? '') as string,
+    });
   } catch (err) {
     console.error('Payment status error:', err);
     return res.status(500).json({ error: 'Erro interno' });

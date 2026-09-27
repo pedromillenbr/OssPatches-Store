@@ -13,6 +13,7 @@ import CouponInput from '@/components/cart/CouponInput';
 import DynamicMessage from '@/components/ui/DynamicMessage';
 import Emoji from '@/components/ui/Emoji';
 import CardForm from '@/components/checkout/CardForm';
+import ThreeDSChallenge from '@/components/checkout/ThreeDSChallenge';
 import SecurityBadge from '@/components/checkout/SecurityBadge';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -290,6 +291,14 @@ export default function PaymentStep() {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(isBrazil ? 'pix' : 'paypal');
   const [cardLoading, setCardLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Desafio 3DS em andamento (banco pediu para o cliente confirmar a compra).
+  const [challenge, setChallenge] = useState<{
+    externalResourceUrl: string;
+    creq: string;
+    orderId: string;
+    mpPaymentId: string;
+    installments: number;
+  } | null>(null);
 
   const subTotal = subtotal();
   const shippingCost = selectedShipping?.price || 0;
@@ -329,6 +338,26 @@ export default function PaymentStep() {
   if (pixQrCode) return <PixScreen />;
 
   // ── Card payment via Mercado Pago Transparent ──
+  // Fecha o pedido aprovado. Serve tanto para a aprovação imediata quanto
+  // para a que só chega depois do cliente confirmar no banco (3DS).
+  const finishApprovedOrder = (approvedOrderId: string, installmentCount: number) => {
+    setPayment({ method: selectedMethod, installments: installmentCount });
+    setOrderId(approvedOrderId);
+
+    trackPurchase({
+      id: approvedOrderId,
+      total,
+      subtotal: subTotal,
+      shippingCost,
+      currency: 'BRL',
+      couponCode: appliedCoupon || undefined,
+      items: items.map((i) => ({ productId: i.productId, name: i.name, category: i.category, price: i.price, quantity: i.quantity })),
+    });
+
+    clearCart();
+    setStep('success');
+  };
+
   const handleCardSubmit = async (payload: {
     cardToken: string;
     paymentMethodId: string;
@@ -348,21 +377,21 @@ export default function PaymentStep() {
         ...payload,
       });
 
-      setPayment({ method: selectedMethod, installments: payload.installments });
-      setOrderId(data.orderId);
+      // 3DS: o banco quer que o titular confirme. O carrinho só é esvaziado
+      // quando o Mercado Pago disser que aprovou.
+      if (data.challenge?.externalResourceUrl && data.challenge?.creq) {
+        setOrderId(data.orderId);
+        setChallenge({
+          externalResourceUrl: data.challenge.externalResourceUrl,
+          creq: data.challenge.creq,
+          orderId: data.orderId,
+          mpPaymentId: String(data.mpPaymentId ?? ''),
+          installments: payload.installments,
+        });
+        return;
+      }
 
-      trackPurchase({
-        id: data.orderId,
-        total,
-        subtotal: subTotal,
-        shippingCost,
-        currency: 'BRL',
-        couponCode: appliedCoupon || undefined,
-        items: items.map((i) => ({ productId: i.productId, name: i.name, category: i.category, price: i.price, quantity: i.quantity })),
-      });
-
-      clearCart();
-      setStep('success');
+      finishApprovedOrder(data.orderId, payload.installments);
     } catch (error: unknown) {
       const msg = axios.isAxiosError(error) && error.response?.data?.error
         ? error.response.data.error
@@ -371,6 +400,45 @@ export default function PaymentStep() {
     } finally {
       setCardLoading(false);
     }
+  };
+
+  // Depois do desafio, quem decide é o Mercado Pago — o aviso do banco só diz
+  // que a tela dele fechou. Consultamos o status real por até ~1 minuto.
+  const handleChallengeComplete = async () => {
+    if (!challenge) return;
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        const { data } = await axios.get(
+          `/api/orders/${challenge.orderId}/status?mpPaymentId=${challenge.mpPaymentId}`
+        );
+        if (data.status === 'approved') {
+          setChallenge(null);
+          finishApprovedOrder(challenge.orderId, challenge.installments);
+          return;
+        }
+        if (data.status === 'rejected' || data.status === 'cancelled') {
+          setChallenge(null);
+          toast.error('Seu banco não aprovou a compra. Tente outro cartão ou pague com Pix.');
+          return;
+        }
+      } catch {
+        /* rede instável — tenta de novo */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+
+    // Ainda pendente: o pedido existe e o webhook confirma sozinho depois.
+    setChallenge(null);
+    toast(
+      `Ainda estamos confirmando com seu banco. Você receberá um e-mail assim que for aprovado — acompanhe o pedido ${challenge.orderId} em /rastrear.`,
+      { duration: 10000 }
+    );
+  };
+
+  const handleChallengeTimeout = () => {
+    setChallenge(null);
+    toast.error('O tempo de confirmação do banco esgotou. Tente novamente ou pague com Pix.');
   };
 
   // ── Pix / other methods via /api/orders ──
@@ -526,6 +594,15 @@ export default function PaymentStep() {
           totalBRL={total}
           subTotalBRL={subTotal}
           onSuccess={handlePayPalSuccess}
+        />
+      )}
+
+      {challenge && (
+        <ThreeDSChallenge
+          externalResourceUrl={challenge.externalResourceUrl}
+          creq={challenge.creq}
+          onComplete={handleChallengeComplete}
+          onTimeout={handleChallengeTimeout}
         />
       )}
 
