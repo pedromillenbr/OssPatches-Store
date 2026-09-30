@@ -9,6 +9,9 @@ import { handleCors } from '@/lib/cors';
 import { cleanAddress, cleanCustomer, cleanShippingLabel, ORDER_ID_REGEX } from '@/lib/checkoutGuards';
 import { checkCoupon, registerUse } from '@/lib/couponUsage';
 import { computePayPalTotals } from '@/lib/paypalTotals';
+import { mirrorOrderToDb } from '@/lib/orderMirror';
+import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
+import { getSessionUser } from '@/lib/sessionUser';
 import type { Order } from '@/types';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -107,6 +110,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (err) {
       console.error('Google Sheets error:', err);
     }
+
+    // Espelha o pedido na conta do cliente aqui no servidor. Vale inclusive
+    // para o pagamento divergente logo abaixo: o dinheiro entrou, então o
+    // pedido precisa existir para o cliente — só não entra como confirmado.
+    const sessionUser = await getSessionUser(req);
+    await mirrorOrderToDb(order, sessionUser?.id ?? null);
+    if (!suspicious) await markOrderPaidInDb(ossOrderId);
 
     // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
     await markCartRecovered(order.customer.email);

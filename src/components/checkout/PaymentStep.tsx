@@ -18,6 +18,7 @@ import SecurityBadge from '@/components/checkout/SecurityBadge';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import axios from 'axios';
+import { authHeader } from '@/lib/authHeader';
 
 const PayPalScriptProvider = dynamic(
   () => import('@paypal/react-paypal-js').then((m) => m.PayPalScriptProvider),
@@ -252,7 +253,7 @@ function PayPalSection({ items, shippingCost, couponCode, discountPercent, total
                 couponCode,
                 discountPercent,
                 discountAmount: Math.round(subTotalBRL * discountPercent) / 100,
-              });
+              }, { headers: await authHeader() });
               trackPurchase({
                 id: ossOrderId!,
                 total: totalUSD,
@@ -375,7 +376,7 @@ export default function PaymentStep() {
         shippingCost,
         couponCode: appliedCoupon || undefined,
         ...payload,
-      });
+      }, { headers: await authHeader() });
 
       // 3DS: o banco quer que o titular confirme. O carrinho só é esvaziado
       // quando o Mercado Pago disser que aprovou.
@@ -457,7 +458,7 @@ export default function PaymentStep() {
         shippingCost,
         couponCode: appliedCoupon || undefined,
         currency: 'BRL',
-      });
+      }, { headers: await authHeader() });
 
       setPayment(payment);
       setOrderId(data.orderId);

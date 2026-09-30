@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { supabase } from '@/lib/supabase';
+import { authHeader } from '@/lib/authHeader';
 import { formatPrice } from '@/services/products';
 import { orderStatusLabel, orderStatusClass } from '@/lib/orderStatus';
 
@@ -42,6 +43,18 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
+      // Antes de listar, recupera pedidos que ficaram só no controle interno:
+      // compra feita sem conta, ou Pix pago no app do banco com a aba fechada.
+      // Se falhar, seguimos em frente e mostramos o que já está no banco.
+      try {
+        const headers = await authHeader();
+        if (headers.Authorization) {
+          await fetch('/api/orders/import-mine', { method: 'POST', headers });
+        }
+      } catch {
+        /* sem rede — a lista abaixo ainda funciona */
+      }
+
       const [{ data: orderData }, { data: reviewData }] = await Promise.all([
         supabase
           .from('orders')

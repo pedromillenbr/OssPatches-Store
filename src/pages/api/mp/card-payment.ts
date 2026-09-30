@@ -7,6 +7,9 @@ import { isBodyTooLarge, sanitizeForSheets } from '@/lib/sanitize';
 import { verifyAndCalculateSubtotal } from '@/lib/priceVerifier';
 import { handleCors } from '@/lib/cors';
 import { generateOrderId } from '@/lib/orderId';
+import { mirrorOrderToDb } from '@/lib/orderMirror';
+import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
+import { getSessionUser } from '@/lib/sessionUser';
 import { cleanAddress, cleanCustomer, cleanShippingLabel } from '@/lib/checkoutGuards';
 import { checkCoupon, holdPixUse, registerUse } from '@/lib/couponUsage';
 import { validateShippingCost } from '@/lib/shipping';
@@ -185,6 +188,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try { await appendOrderToSheet(order); } catch (err) { console.error('Sheets error:', err); }
+
+  // Espelha o pedido na conta do cliente aqui no servidor — não dependemos
+  // mais do navegador chegar (e ficar) na tela de sucesso.
+  const sessionUser = await getSessionUser(req);
+  await mirrorOrderToDb(order, sessionUser?.id ?? null);
+  if (mpStatus === 'approved') await markOrderPaidInDb(orderId);
   // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
   await markCartRecovered(order.customer.email);
   sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));

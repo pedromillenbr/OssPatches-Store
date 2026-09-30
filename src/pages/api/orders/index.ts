@@ -11,6 +11,8 @@ import { generateOrderId } from '@/lib/orderId';
 import { validateShippingCost } from '@/lib/shipping';
 import { cleanAddress, cleanCustomer, cleanShippingLabel } from '@/lib/checkoutGuards';
 import { checkCoupon, holdPixUse } from '@/lib/couponUsage';
+import { mirrorOrderToDb } from '@/lib/orderMirror';
+import { getSessionUser } from '@/lib/sessionUser';
 
 async function createPixPayment(order: Order, total: number): Promise<{
   mpPaymentId: string;
@@ -171,6 +173,12 @@ export default async function handler(
   } catch (err) {
     console.error('Google Sheets error:', err);
   }
+
+  // Espelha o pedido na conta do cliente AGORA, no servidor. Antes isso só
+  // acontecia na tela de sucesso, no navegador — e no Pix o cliente paga no app
+  // do banco e quase nunca volta para a aba, então o pedido nunca aparecia.
+  const sessionUser = await getSessionUser(req);
+  await mirrorOrderToDb(order, sessionUser?.id ?? null);
 
   // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
   await markCartRecovered(order.customer.email);

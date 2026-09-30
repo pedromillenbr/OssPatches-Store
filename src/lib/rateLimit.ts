@@ -84,6 +84,9 @@ const LIMITS: Record<string, LimiterConfig> = {
   'cart-save': { requests: 5, window: '10 m' },
   // Restaurar/descadastrar pelo token do e-mail.
   'cart-restore': { requests: 20, window: '5 m' },
+  // Recuperação dos pedidos antigos do cliente logado. Lê a planilha inteira,
+  // então basta uma vez a cada abertura da página de pedidos.
+  'order-import': { requests: 6, window: '5 m' },
 };
 
 // ---------------------------------------------------------------------------

@@ -622,3 +622,95 @@ export async function updateOrderStatusInSheet(
     console.error('[sheets] Failed to update order status:', error);
   }
 }
+
+/** Pedido antigo, montado a partir das linhas da planilha. */
+export interface SheetOrderSummary {
+  id: string;
+  createdAt: string;
+  email: string;
+  total: number;
+  currency: string;
+  /** Status cru do gateway ('approved', 'pending'…). */
+  gatewayStatus: string;
+  shippingStage: string;
+  tracking: string;
+  items: { name: string; quantity: number; price: number }[];
+}
+
+/**
+ * Busca na planilha todos os pedidos feitos com um e-mail.
+ *
+ * Serve para recuperar pedidos antigos: enquanto o pedido só era gravado pelo
+ * navegador na tela de sucesso, quem comprou como convidado (ou pagou o Pix no
+ * app do banco e fechou a aba) ficou sem nada em "Meus pedidos". A planilha
+ * tem tudo — daqui a gente traz de volta para a conta do cliente.
+ *
+ * Um pedido ocupa uma linha por item, e pode ter itens nas duas abas, então
+ * agrupamos tudo pelo número do pedido.
+ */
+export async function getOrdersByEmailFromSheet(email: string): Promise<SheetOrderSummary[]> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return [];
+
+  const wanted = email.trim().toLowerCase();
+  if (!wanted) return [];
+
+  try {
+    const sheets = await getSheetsClient();
+    const byId = new Map<string, SheetOrderSummary>();
+
+    for (const tab of TABS) {
+      let rows: string[][];
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: fullRange(tab),
+        });
+        rows = (response.data.values as string[][]) || [];
+      } catch {
+        continue; // aba ainda não existe
+      }
+
+      for (const row of rows) {
+        const cell = (key: string): string =>
+          (row[indexOf(tab, key)] as string | undefined) || '';
+
+        if (cell('email').trim().toLowerCase() !== wanted) continue;
+
+        const id = cell('id');
+        if (!id) continue;
+
+        const quantity = parseInt(cell('quantity'), 10) || 1;
+        const lineValue = parseFloat(cell('value')) || 0;
+        const item = {
+          name: productNameFrom(tab, cell),
+          quantity,
+          price: Math.round((lineValue / quantity) * 100) / 100,
+        };
+
+        const existing = byId.get(id);
+        if (existing) {
+          existing.items.push(item);
+          continue;
+        }
+
+        byId.set(id, {
+          id,
+          createdAt: cell('createdAt'),
+          email: cell('email'),
+          total: parseFloat(cell('total')) || 0,
+          currency: cell('currency') || 'BRL',
+          gatewayStatus: statusRaw(cell('status')) || 'pending',
+          shippingStage: cell('shipping'),
+          tracking: cell('tracking'),
+          items: [item],
+        });
+      }
+    }
+
+    return Array.from(byId.values());
+  } catch (error) {
+    console.error('[sheets] Falha ao buscar pedidos por e-mail:', error);
+    return [];
+  }
+}
