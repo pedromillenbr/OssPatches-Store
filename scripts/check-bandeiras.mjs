@@ -11,8 +11,12 @@ import { readFile } from 'fs/promises';
 const ENV_FILE = '.env.local';
 const ENV_KEY = 'NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY';
 
-// Bandeiras que estamos esperando o Mercado Pago liberar.
-const AGUARDANDO = ['debvisa', 'debmaster'];
+// Bandeiras que faltam na conta e que valem um pedido ao Mercado Pago.
+// Nada disso depende de código: o site já usa a bandeira que o Mercado Pago
+// informar, então no dia em que forem liberadas passam a funcionar sozinhas.
+//   debvisa / debmaster → débito Visa e Mastercard, os mais usados do país
+//   hipercard           → forte no Nordeste e em redes de varejo
+const AGUARDANDO = ['debvisa', 'debmaster', 'hipercard'];
 
 const LABELS = {
   credit_card: 'Crédito',
