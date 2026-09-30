@@ -5,6 +5,7 @@ import { sendPaymentConfirmedEmail } from '@/services/email';
 import { Order } from '@/types';
 import { settlePixUse } from '@/lib/couponUsage';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
+import { sendPurchaseToMeta } from '@/lib/metaCapi';
 
 function validateSignature(req: NextApiRequest, secret: string): boolean {
   const xSignature = req.headers['x-signature'] as string;
@@ -117,6 +118,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (status === 'approved' && !wasAlreadyApproved && existingOrder?.customer?.email) {
         sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
           console.error('[webhook] Email error:', err)
+        );
+      }
+
+      // Purchase para a Meta, pela API de Conversões. Fica aqui, e não no
+      // navegador, porque este é o único ponto em que temos certeza de que o
+      // dinheiro entrou — e porque bloqueador de anúncio derruba o Pixel em
+      // boa parte dos aparelhos. O `event_id` é o número do pedido, o mesmo
+      // que o navegador usa, então a Meta descarta a cópia e a reentrega do
+      // webhook não conta a venda de novo.
+      if (status === 'approved' && !wasAlreadyApproved && existingOrder) {
+        sendPurchaseToMeta(existingOrder as Order).catch((err) =>
+          console.error('[webhook] Meta CAPI error:', err)
         );
       }
     }

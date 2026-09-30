@@ -32,6 +32,10 @@ const nextConfig = {
     // Domains used by the app that must be whitelisted in CSP
     const mpDomains = 'https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadopago.com.br';
     const gaDomains = 'https://*.google-analytics.com https://*.googletagmanager.com https://www.google.com';
+    // Pixel da Meta: o script vem do connect.facebook.net e os eventos são
+    // enviados para www.facebook.com/tr. Sem os dois no CSP o Pixel é bloqueado
+    // pelo navegador e não registra absolutamente nada.
+    const metaDomains = 'https://connect.facebook.net https://*.facebook.com https://*.facebook.net';
     const fontDomains = 'https://fonts.googleapis.com https://fonts.gstatic.com';
     // Supabase (login/conta): auth, banco e storage de avatares. Sem isto no
     // connect-src, o navegador bloqueia a conexão ("Failed to fetch").
@@ -39,11 +43,11 @@ const nextConfig = {
 
     const csp = [
       `default-src 'self'`,
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${gaDomains} ${mpDomains}`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${gaDomains} ${metaDomains} ${mpDomains}`,
       `style-src 'self' 'unsafe-inline' ${fontDomains}`,
       `font-src 'self' data: ${fontDomains}`,
       `img-src 'self' data: blob: https: http:`,
-      `connect-src 'self' ${mpDomains} ${gaDomains} ${supabaseDomains} https://viacep.com.br https://sandbox.melhorenvio.com.br https://melhorenvio.com.br https://api.resend.com`,
+      `connect-src 'self' ${mpDomains} ${gaDomains} ${metaDomains} ${supabaseDomains} https://viacep.com.br https://sandbox.melhorenvio.com.br https://melhorenvio.com.br https://api.resend.com`,
       // O desafio 3DS ("Verified by Visa") abre um iframe no domínio do BANCO
       // emissor — e cada banco usa o seu. Não existe lista publicada, então
       // liberamos https:. O iframe é criado pelo nosso código, a partir da URL
