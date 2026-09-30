@@ -1,5 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getOrderFromSheet, updateOrderStatusInSheet } from '@/services/googleSheets';
+import {
+  getAllOrdersFromSheet,
+  getOrderFromSheet,
+  updateOrderStatusInSheet,
+} from '@/services/googleSheets';
 import { sendPaymentConfirmedEmail } from '@/services/email';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
 import { settlePixUse } from '@/lib/couponUsage';
@@ -64,10 +68,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Banco de Dados não configurado no servidor.' });
   }
 
-  const { data: pending, error } = await admin
+  // Quem manda aqui é o controle interno: se a coluna Status já diz "Pago",
+  // não há o que acertar. Lemos a planilha UMA vez e só perguntamos ao
+  // Mercado Pago sobre os pedidos que continuam em aberto lá.
+  const sheetOrders = await getAllOrdersFromSheet();
+  const gatewayStatusByRef = new Map(sheetOrders.map((o) => [o.id, o.gatewayStatus]));
+
+  // Não olhamos só o que está "aguardando pagamento": um pedido que a loja já
+  // adiantou para "Em produção" no painel continua marcado como Pendente na
+  // planilha, e é exatamente esse descompasso que precisa sumir.
+  const { data: open, error } = await admin
     .from('orders')
     .select('order_ref')
-    .eq('status', 'pending')
+    .in('status', ['pending', 'confirmed', 'processing'])
     .order('created_at', { ascending: false })
     .limit(MAX_ORDERS);
 
@@ -76,25 +89,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Não foi possível ler os pedidos.' });
   }
 
+  const pendentes = (open ?? [])
+    .map((row) => row.order_ref as string)
+    .filter((ref) => gatewayStatusByRef.get(ref) !== 'approved');
+
   let confirmed = 0;
 
-  for (const row of pending ?? []) {
-    const orderRef = row.order_ref as string;
+  for (const orderRef of pendentes) {
     try {
       const paymentId = await findApprovedPayment(orderRef);
       if (!paymentId) continue;
-
-      // Mesma proteção do aviso automático: só mandamos o e-mail de pagamento
-      // confirmado se a planilha ainda não registrava o pedido como pago.
-      const existing = await getOrderFromSheet(orderRef);
-      const wasApproved = existing?.gatewayStatus === 'approved';
 
       await updateOrderStatusInSheet(orderRef, 'approved', paymentId);
       await settlePixUse(orderRef);
       await markOrderPaidInDb(orderRef);
       confirmed += 1;
 
-      if (!wasApproved && existing?.customer?.email) {
+      // A planilha ainda não registrava o pagamento, então o e-mail de
+      // confirmação nunca saiu — este é o momento de mandar.
+      const existing = await getOrderFromSheet(orderRef);
+      if (existing?.customer?.email) {
         sendPaymentConfirmedEmail(existing as Order).catch((err) =>
           console.error('[check-payments] e-mail:', err)
         );
@@ -104,6 +118,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  console.log(`[check-payments] ${confirmed} de ${pending?.length ?? 0} confirmados`);
-  return res.status(200).json({ checked: pending?.length ?? 0, confirmed });
+  console.log(`[check-payments] ${confirmed} de ${pendentes.length} confirmados`);
+  return res.status(200).json({ checked: pendentes.length, confirmed });
 }

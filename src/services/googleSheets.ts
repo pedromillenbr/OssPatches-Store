@@ -236,6 +236,10 @@ const CLOSING: SheetColumn[] = [
       return prazo ? nome + ' - ' + prazo : nome;
     },
   },
+  // Frete e desconto do pedido, separados do total. Sem isso não dá para
+  // conferir quanto sobrou da venda nem o que foi pago à transportadora.
+  { key: 'shippingCost', header: 'Frete', value: ({ order }) => money(order.shippingCost) },
+  { key: 'discount', header: 'Desconto', value: ({ order }) => money(order.discountAmount ?? 0) },
 ];
 
 const PATCH_COLUMNS: SheetColumn[] = [
@@ -648,6 +652,12 @@ export interface SheetOrderSummary {
   paymentMethod: string;
   /** Coluna "Transportadora", vazia nos pedidos anteriores à coluna existir. */
   carrier: string;
+  /** O que a planilha guarda do endereço: CEP leva à rua, o resto não. */
+  zipCode: string;
+  number: string;
+  complement: string;
+  shippingCost: number;
+  discountAmount: number;
   total: number;
   currency: string;
   /** Status cru do gateway ('approved', 'pending'…). */
@@ -762,6 +772,11 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
           phone: cell('phone'),
           paymentMethod: cell('paymentMethod'),
           carrier: cell('carrier'),
+          zipCode: cell('zipCode'),
+          number: cell('number'),
+          complement: cell('complement'),
+          shippingCost: parseFloat(cell('shippingCost')) || 0,
+          discountAmount: parseFloat(cell('discount')) || 0,
           total: parseFloat(cell('total')) || 0,
           currency: cell('currency') || 'BRL',
           gatewayStatus: statusRaw(cell('status')) || 'pending',
@@ -852,5 +867,54 @@ export async function updateOrderShippingInSheet(
   } catch (error) {
     console.error('[sheets] falha ao atualizar envio:', error);
     return 0;
+  }
+}
+
+/**
+ * Link que abre a planilha já na linha do pedido.
+ *
+ * Existe para não ter de procurar o número à mão quando o painel e a planilha
+ * precisam ser comparados. Devolve null se o pedido não estiver lá.
+ */
+export async function getSheetLinkForOrder(orderId: string): Promise<string | null> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return null;
+
+  try {
+    const sheets = await getSheetsClient();
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+
+    const gidByName = new Map<string, number>();
+    (meta.data.sheets || []).forEach((sheet) => {
+      const title = sheet.properties?.title;
+      const id = sheet.properties?.sheetId;
+      if (title && typeof id === 'number') gidByName.set(title, id);
+    });
+
+    for (const tab of TABS) {
+      let rows: string[][];
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${tab.name}!A:A`,
+        });
+        rows = (response.data.values as string[][]) || [];
+      } catch {
+        continue;
+      }
+
+      const index = rows.findIndex((r) => r[0] === orderId);
+      if (index === -1) continue;
+
+      const gid = gidByName.get(tab.name);
+      if (gid === undefined) continue;
+
+      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${gid}&range=A${index + 1}`;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[sheets] falha ao montar link do pedido:', error);
+    return null;
   }
 }

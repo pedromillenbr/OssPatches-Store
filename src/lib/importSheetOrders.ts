@@ -27,17 +27,19 @@ export async function importSheetOrders(
   const { data: existing } = await admin
     .from('orders')
     .select(
-      'order_ref, customer_name, customer_phone, customer_email, payment_method, shipping_method'
+      'order_ref, customer_name, customer_phone, customer_email, payment_method, ' +
+        'shipping_method, address, items'
     )
     .in('order_ref', orders.map((o) => o.id));
 
-  const known = new Set((existing ?? []).map((r) => r.order_ref as string));
+  const rows0 = (existing ?? []) as unknown as ExistingRow[];
+  const known = new Set(rows0.map((r) => r.order_ref));
 
   // Pedido que já está aqui mas entrou sem os dados do cliente (importação
   // antiga, ou espelho gravado antes destas colunas existirem). Preenchemos
   // SÓ o que está em branco — status, rastreio e valores ficam como estão,
   // porque podem ter sido ajustados à mão no painel.
-  await fillBlanks(admin, existing ?? [], orders);
+  await fillBlanks(admin, rows0, orders);
 
   const missing = orders.filter((o) => !known.has(o.id));
   if (!missing.length) return 0;
@@ -60,12 +62,14 @@ export async function importSheetOrders(
       order_ref: o.id,
       status,
       currency: o.currency,
-      subtotal: o.total,
-      shipping_cost: 0,
-      discount_amount: 0,
+      // O total é o que o cliente pagou. Frete e desconto vêm das colunas
+      // novas; nos pedidos antigos elas estão vazias e ficam zeradas.
+      subtotal: Math.round((o.total - o.shippingCost + o.discountAmount) * 100) / 100,
+      shipping_cost: o.shippingCost,
+      discount_amount: o.discountAmount,
       total: o.total,
       items: o.items,
-      address: null,
+      address: addressFrom(o),
       tracking_code: tracking && !isUrl ? tracking : null,
       tracking_url: isUrl ? tracking : null,
       ...(o.createdAt ? { created_at: o.createdAt } : {}),
@@ -92,6 +96,24 @@ interface ExistingRow {
   customer_email: string | null;
   payment_method: string | null;
   shipping_method: string | null;
+  address: Record<string, unknown> | null;
+  items: ({ details?: string; customization?: unknown } | null)[] | null;
+}
+
+/**
+ * O endereço possível a partir da planilha.
+ *
+ * A planilha guarda CEP, número e complemento — rua, bairro e cidade saem do
+ * CEP. É o suficiente para postar; o painel mostra o que existe e não inventa
+ * o resto.
+ */
+function addressFrom(o: SheetOrderSummary): Record<string, string> | null {
+  if (!o.zipCode && !o.number) return null;
+  return {
+    zipCode: o.zipCode,
+    number: o.number,
+    complement: o.complement,
+  };
 }
 
 /**
@@ -102,16 +124,16 @@ interface ExistingRow {
  */
 async function fillBlanks(
   admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
-  existing: unknown[],
+  existing: ExistingRow[],
   orders: SheetOrderSummary[]
 ): Promise<void> {
   const bySheetRef = new Map(orders.map((o) => [o.id, o]));
 
-  for (const raw of existing as ExistingRow[]) {
+  for (const raw of existing) {
     const sheet = bySheetRef.get(raw.order_ref);
     if (!sheet) continue;
 
-    const patch: Record<string, string> = {};
+    const patch: Record<string, unknown> = {};
     if (!raw.customer_name && sheet.name) patch.customer_name = sheet.name;
     if (!raw.customer_phone && sheet.phone) patch.customer_phone = sheet.phone;
     if (!raw.customer_email && sheet.email) {
@@ -119,6 +141,14 @@ async function fillBlanks(
     }
     if (!raw.payment_method && sheet.paymentMethod) patch.payment_method = sheet.paymentMethod;
     if (!raw.shipping_method && sheet.carrier) patch.shipping_method = sheet.carrier;
+    if (!raw.address) patch.address = addressFrom(sheet);
+
+    // Pedidos recuperados antes entraram sem a personalização de cada item —
+    // justamente o que a produção precisa ler.
+    const semDetalhe = (raw.items ?? []).every(
+      (i) => !i || (!i.details && !i.customization)
+    );
+    if (semDetalhe && sheet.items.some((i) => i.details)) patch.items = sheet.items;
 
     if (Object.keys(patch).length === 0) continue;
 

@@ -25,6 +25,9 @@ interface AdminOrder {
   id: string;
   order_ref: string;
   status: string;
+  subtotal: number | null;
+  shipping_cost: number | null;
+  discount_amount: number | null;
   total: number;
   currency: string;
   items: AdminOrderItem[];
@@ -41,8 +44,9 @@ interface AdminOrder {
 }
 
 const SELECT_COLUMNS =
-  'id, order_ref, status, total, currency, items, address, customer_name, customer_email, ' +
-  'customer_phone, payment_method, shipping_method, tracking_code, tracking_url, seen_at, created_at';
+  'id, order_ref, status, subtotal, shipping_cost, discount_amount, total, currency, items, ' +
+  'address, customer_name, customer_email, customer_phone, payment_method, shipping_method, ' +
+  'tracking_code, tracking_url, seen_at, created_at';
 
 const PAYMENT_LABEL: Record<string, string> = {
   pix: 'Pix',
@@ -244,6 +248,22 @@ function itemDetails(item: AdminOrderItem): string {
     .join(' · ');
 }
 
+/**
+ * Endereço em texto, pulando o que não existe.
+ *
+ * Pedido recuperado do controle interno só tem CEP, número e complemento — a
+ * rua e a cidade vêm do CEP. Melhor mostrar o que há do que inventar linha.
+ */
+function formatAddress(addr: Record<string, string>): string {
+  const rua = [addr.street, addr.number].filter(Boolean).join(', ');
+  const linha1 = [rua, addr.complement].filter(Boolean).join(' — ');
+  const cidade = [addr.city, addr.state].filter(Boolean).join('/');
+  const linha2 = [addr.neighborhood, cidade].filter(Boolean).join(', ');
+  const cep = addr.zipCode || addr.cep;
+
+  return [linha1, linha2, cep && `CEP ${cep}`].filter(Boolean).join('\n');
+}
+
 /** Link direto de WhatsApp a partir do telefone gravado no pedido. */
 function whatsappLink(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -264,13 +284,32 @@ function AdminOrderRow({
   const [trackingCode, setTrackingCode] = useState(order.tracking_code ?? '');
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url ?? '');
   const [saving, setSaving] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
 
   const novo = !order.seen_at;
   const addr = order.address;
 
-  const toggle = () => {
-    if (!open) onOpen();
-    setOpen((v) => !v);
+  // O link da planilha é montado na hora: a linha do pedido muda de lugar
+  // conforme a planilha cresce, então guardar não adiantaria.
+  const toggle = async () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    onOpen();
+    setOpen(true);
+
+    if (sheetUrl) return;
+    try {
+      const res = await fetch(`/api/admin/sheet-link?orderRef=${order.order_ref}`, {
+        headers: await authHeader(),
+      });
+      const data = await res.json();
+      if (data.url) setSheetUrl(data.url);
+    } catch {
+      /* sem link é só um atalho a menos */
+    }
   };
 
   const handleSave = async () => {
@@ -378,15 +417,7 @@ function AdminOrderRow({
             <Field label="Entrega">
               <p>{order.shipping_method || 'Forma de envio não registrada'}</p>
               {addr ? (
-                <p className="mt-1">
-                  {addr.street}, {addr.number}
-                  {addr.complement ? ` — ${addr.complement}` : ''}
-                  <br />
-                  {addr.neighborhood ? `${addr.neighborhood}, ` : ''}
-                  {addr.city}/{addr.state}
-                  <br />
-                  CEP {addr.zipCode || addr.cep}
-                </p>
+                <p className="mt-1 whitespace-pre-line">{formatAddress(addr)}</p>
               ) : (
                 <p className="mt-1 text-brand-gray-500">Endereço não registrado</p>
               )}
@@ -398,9 +429,21 @@ function AdminOrderRow({
                   ? PAYMENT_LABEL[order.payment_method] || order.payment_method
                   : '—'}
               </p>
-              <p className="mt-1 font-semibold text-brand-black">
-                {formatPrice(order.total, order.currency)}
-              </p>
+              <dl className="mt-2 space-y-0.5">
+                <Money label="Produtos" value={order.subtotal} currency={order.currency} />
+                <Money label="Frete" value={order.shipping_cost} currency={order.currency} />
+                {!!order.discount_amount && (
+                  <Money
+                    label="Desconto"
+                    value={-order.discount_amount}
+                    currency={order.currency}
+                  />
+                )}
+                <div className="flex justify-between gap-4 border-t border-brand-gray-100 pt-1 font-semibold text-brand-black">
+                  <dt>Total pago</dt>
+                  <dd>{formatPrice(order.total, order.currency)}</dd>
+                </div>
+              </dl>
             </Field>
 
             <Field label="Itens">
@@ -457,6 +500,19 @@ function AdminOrderRow({
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-brand-gray-500">
               Salvar atualiza o painel e a planilha ao mesmo tempo.
+              {sheetUrl && (
+                <>
+                  {' · '}
+                  <a
+                    href={sheetUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold underline"
+                  >
+                    Abrir na planilha
+                  </a>
+                </>
+              )}
             </p>
             <Button size="sm" onClick={handleSave} loading={saving}>
               Salvar alterações
@@ -465,6 +521,23 @@ function AdminOrderRow({
         </div>
       )}
     </li>
+  );
+}
+
+function Money({
+  label,
+  value,
+  currency,
+}: {
+  label: string;
+  value: number | null;
+  currency: string;
+}) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt>{label}</dt>
+      <dd>{value === null ? '—' : formatPrice(value, currency)}</dd>
+    </div>
   );
 }
 
