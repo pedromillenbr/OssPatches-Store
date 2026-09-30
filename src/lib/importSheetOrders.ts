@@ -44,6 +44,10 @@ export async function importSheetOrders(
     return {
       user_id: userId ?? null,
       customer_email: o.email.trim().toLowerCase() || null,
+      customer_name: o.name || null,
+      customer_phone: o.phone || null,
+      payment_method: o.paymentMethod || null,
+      shipping_method: o.carrier || null,
       order_ref: o.id,
       status,
       currency: o.currency,

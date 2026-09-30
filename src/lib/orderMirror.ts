@@ -27,14 +27,25 @@ export async function mirrorOrderToDb(
   if (!admin) return;
 
   try {
-    // Só o essencial de cada item — o detalhe completo vive na planilha.
+    // Guardamos a personalização junto: é o que o painel precisa mostrar para
+    // produzir (tamanho, graus, nome bordado, arte do patch).
     const items = (order.items ?? []).map((i) => ({
       name: i.name,
       quantity: i.quantity,
       price: i.price,
       image: i.image,
       slug: i.slug,
+      customization: i.customization ?? null,
     }));
+
+    const shipping = order.shipping
+      ? [
+          [order.shipping.company, order.shipping.name].filter(Boolean).join(' '),
+          order.shipping.days,
+        ]
+          .filter(Boolean)
+          .join(' - ')
+      : null;
 
     const email = (order.customer?.email || '').trim().toLowerCase();
 
@@ -44,6 +55,10 @@ export async function mirrorOrderToDb(
       {
         user_id: userId ?? null,
         customer_email: email || null,
+        customer_name: order.customer?.name || null,
+        customer_phone: order.customer?.phone || null,
+        payment_method: order.payment?.method || null,
+        shipping_method: shipping,
         order_ref: order.id,
         status: 'pending',
         currency: order.currency,

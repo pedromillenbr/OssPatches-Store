@@ -1,14 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NextSeo } from 'next-seo';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 import Layout from '@/components/layout/Layout';
 import AdminLayout from '@/components/admin/AdminLayout';
 import Button from '@/components/ui/Button';
 import { useRequireAdmin } from '@/hooks/useRequireAdmin';
 import { supabase } from '@/lib/supabase';
+import { authHeader } from '@/lib/authHeader';
 import { formatPrice } from '@/services/products';
 import { ALL_STATUSES, orderStatusLabel } from '@/lib/orderStatus';
-import { authHeader } from '@/lib/authHeader';
+
+interface AdminOrderItem {
+  name: string;
+  quantity: number;
+  price?: number;
+  /** Personalização dos pedidos novos, como veio do checkout. */
+  customization?: Record<string, unknown> | null;
+  /** Personalização já montada em texto, nos pedidos vindos da planilha. */
+  details?: string;
+}
 
 interface AdminOrder {
   id: string;
@@ -16,25 +27,61 @@ interface AdminOrder {
   status: string;
   total: number;
   currency: string;
-  items: { name: string; quantity: number }[];
-  address: Record<string, unknown> | null;
+  items: AdminOrderItem[];
+  address: Record<string, string> | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  payment_method: string | null;
+  shipping_method: string | null;
   tracking_code: string | null;
   tracking_url: string | null;
+  seen_at: string | null;
   created_at: string;
 }
+
+const SELECT_COLUMNS =
+  'id, order_ref, status, total, currency, items, address, customer_name, customer_email, ' +
+  'customer_phone, payment_method, shipping_method, tracking_code, tracking_url, seen_at, created_at';
+
+const PAYMENT_LABEL: Record<string, string> = {
+  pix: 'Pix',
+  card: 'Cartão',
+  credit_card: 'Cartão de crédito',
+  debit_card: 'Cartão de débito',
+  paypal: 'PayPal',
+};
 
 export default function AdminOrdersPage() {
   const { ready } = useRequireAdmin();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [importing, setImporting] = useState(false);
+  const [busy, setBusy] = useState<'import' | 'payments' | null>(null);
+  const [migrationPending, setMigrationPending] = useState(false);
 
   const loadOrders = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('orders')
-      .select('id, order_ref, status, total, currency, items, address, tracking_code, tracking_url, created_at')
+      .select(SELECT_COLUMNS)
       .order('created_at', { ascending: false });
-    setOrders((data as AdminOrder[]) ?? []);
+
+    if (error) {
+      // As colunas novas (cliente, envio, "já vi") só existem depois de rodar
+      // supabase/orders_painel_completo.sql. Até lá, mostramos a lista básica
+      // em vez de uma tela vazia que parece perda de pedido.
+      console.warn('[admin] colunas novas ainda não existem:', error.message);
+      setMigrationPending(true);
+      const { data: basic } = await supabase
+        .from('orders')
+        .select('id, order_ref, status, total, currency, items, address, tracking_code, tracking_url, created_at')
+        .order('created_at', { ascending: false });
+      setOrders((basic as unknown as AdminOrder[]) ?? []);
+      setLoading(false);
+      return;
+    }
+
+    setMigrationPending(false);
+    setOrders((data as unknown as AdminOrder[]) ?? []);
     setLoading(false);
   };
 
@@ -44,30 +91,35 @@ export default function AdminOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
-  // Traz da planilha os pedidos que nunca chegaram ao Banco de Dados — os que
-  // foram feitos antes da correção, quando quem gravava era o navegador do
-  // cliente. Pedido já existente aqui não é tocado.
-  const handleImport = async () => {
-    setImporting(true);
+  const novos = useMemo(() => orders.filter((o) => !o.seen_at).length, [orders]);
+
+  /** Chama uma rota do painel e recarrega a lista quando ela mudou algo. */
+  const runAction = async (
+    key: 'import' | 'payments',
+    url: string,
+    describe: (data: Record<string, number>) => string
+  ) => {
+    setBusy(key);
     try {
-      const res = await fetch('/api/admin/import-orders', {
-        method: 'POST',
-        headers: await authHeader(),
-      });
+      const res = await fetch(url, { method: 'POST', headers: await authHeader() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
-      if (data.imported > 0) {
-        toast.success(` pedido(s) recuperado(s)`);
-        await loadOrders();
-      } else {
-        toast.success('Tudo em dia — nenhum pedido faltando.');
-      }
+      toast.success(describe(data));
+      await loadOrders();
     } catch {
-      toast.error('Não foi possível importar agora. Tente de novo.');
+      toast.error('Não deu certo agora. Tente de novo em instantes.');
     } finally {
-      setImporting(false);
+      setBusy(null);
     }
+  };
+
+  // Marca como visto assim que a loja abre o pedido. É isso que tira a
+  // marcação vermelha de "novo".
+  const markSeen = async (order: AdminOrder) => {
+    if (order.seen_at) return;
+    const seenAt = new Date().toISOString();
+    setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, seen_at: seenAt } : o)));
+    await supabase.from('orders').update({ seen_at: seenAt }).eq('id', order.id);
   };
 
   if (!ready) {
@@ -84,20 +136,63 @@ export default function AdminOrdersPage() {
     <Layout>
       <NextSeo title="Admin — Pedidos" noindex />
       <AdminLayout title="Pedidos">
+        {migrationPending && (
+          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Falta um passo no Banco de Dados: rode{' '}
+            <code className="font-mono">supabase/orders_painel_completo.sql</code> no SQL
+            Editor para ver cliente, entrega e a marcação de pedidos novos.
+          </div>
+        )}
+
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-gray-200 bg-brand-gray-50 px-4 py-3">
           <p className="text-sm text-brand-gray-600">
-            Faltando algum pedido aqui? Traga do controle interno — o que já está
-            na lista não é alterado.
+            {novos > 0 ? (
+              <>
+                <strong className="text-red-600">
+                  {novos} pedido{novos > 1 ? 's' : ''} que você ainda não abriu
+                </strong>{' '}
+                — marcados em vermelho.
+              </>
+            ) : (
+              'Todos os pedidos já foram vistos.'
+            )}
           </p>
-          <Button onClick={handleImport} disabled={importing} variant="secondary" className="shrink-0">
-            {importing ? 'Importando…' : 'Importar pedidos'}
-          </Button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy !== null}
+              onClick={() =>
+                runAction('payments', '/api/admin/check-payments', (d) =>
+                  d.confirmed > 0
+                    ? `${d.confirmed} pagamento(s) confirmado(s)`
+                    : 'Nenhum pagamento novo encontrado.'
+                )
+              }
+            >
+              {busy === 'payments' ? 'Verificando…' : 'Verificar pagamentos'}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy !== null}
+              onClick={() =>
+                runAction('import', '/api/admin/import-orders', (d) =>
+                  d.imported > 0
+                    ? `${d.imported} pedido(s) recuperado(s)`
+                    : 'Tudo em dia — nenhum pedido faltando.'
+                )
+              }
+            >
+              {busy === 'import' ? 'Importando…' : 'Importar pedidos'}
+            </Button>
+          </div>
         </div>
 
         {loading ? (
           <div className="space-y-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-32 animate-pulse rounded-lg bg-brand-gray-100" />
+              <div key={i} className="h-20 animate-pulse rounded-lg bg-brand-gray-100" />
             ))}
           </div>
         ) : orders.length === 0 ? (
@@ -105,9 +200,14 @@ export default function AdminOrdersPage() {
             Nenhum pedido na lista. Se você já vendeu, use “Importar pedidos” acima.
           </p>
         ) : (
-          <ul className="space-y-4">
+          <ul className="space-y-3">
             {orders.map((order) => (
-              <AdminOrderRow key={order.id} order={order} />
+              <AdminOrderRow
+                key={order.id}
+                order={order}
+                onOpen={() => markSeen(order)}
+                onSaved={loadOrders}
+              />
             ))}
           </ul>
         )}
@@ -116,90 +216,265 @@ export default function AdminOrdersPage() {
   );
 }
 
-function AdminOrderRow({ order }: { order: AdminOrder }) {
+/** Personalização do item, em uma linha, para quem vai produzir. */
+function itemDetails(item: AdminOrderItem): string {
+  if (item.details) return item.details;
+
+  const c = item.customization;
+  if (!c) return '';
+
+  const str = (key: string) => {
+    const value = c[key];
+    return value === undefined || value === null || value === '' ? '' : String(value);
+  };
+
+  const stripe = str('stripe');
+
+  return [
+    str('size') && `Tamanho ${str('size')}`,
+    str('degree') && `${str('degree')} grau(s)`,
+    str('format'),
+    c.type === 'custom' ? 'Personalizada' : '',
+    str('embroideredName') && `Nome: ${str('embroideredName')}`,
+    str('nameColor') && `Bordado ${str('nameColor')}`,
+    stripe && stripe !== 'none' ? `Ponteira ${stripe}` : '',
+    str('artworkFileName') && `Arte: ${str('artworkFileName')}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Link direto de WhatsApp a partir do telefone gravado no pedido. */
+function whatsappLink(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  return `https://wa.me/${digits.startsWith('55') ? digits : `55${digits}`}`;
+}
+
+function AdminOrderRow({
+  order,
+  onOpen,
+  onSaved,
+}: {
+  order: AdminOrder;
+  onOpen: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(order.status);
   const [trackingCode, setTrackingCode] = useState(order.tracking_code ?? '');
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url ?? '');
   const [saving, setSaving] = useState(false);
 
-  const addr = order.address as Record<string, string> | null;
+  const novo = !order.seen_at;
+  const addr = order.address;
+
+  const toggle = () => {
+    if (!open) onOpen();
+    setOpen((v) => !v);
+  };
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from('orders')
-      .update({
-        status,
-        tracking_code: trackingCode.trim() || null,
-        tracking_url: trackingUrl.trim() || null,
-      })
-      .eq('id', order.id);
-    setSaving(false);
-    if (error) {
+    try {
+      const res = await fetch('/api/admin/order-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+        body: JSON.stringify({
+          orderRef: order.order_ref,
+          status,
+          trackingCode: trackingCode.trim(),
+          trackingUrl: trackingUrl.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // A planilha é o controle interno: se ela não recebeu, a loja precisa
+      // saber, senão vai confiar num dado que só existe aqui.
+      toast.success(
+        data.sheetRows > 0
+          ? `Pedido ${order.order_ref} atualizado aqui e na planilha`
+          : `Pedido ${order.order_ref} atualizado (a planilha não respondeu)`
+      );
+      await onSaved();
+    } catch {
       toast.error('Não foi possível salvar.');
-      return;
+    } finally {
+      setSaving(false);
     }
-    toast.success(`Pedido ${order.order_ref} atualizado`);
   };
 
   return (
-    <li className="rounded-lg border border-brand-gray-200 p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-sm font-semibold text-brand-black">{order.order_ref}</p>
-          <p className="mt-1 text-xs text-brand-gray-500">
-            {new Date(order.created_at).toLocaleString('pt-BR')}
-          </p>
-          <p className="mt-2 text-sm text-brand-gray-700">
+    <li
+      className={clsx(
+        'overflow-hidden rounded-lg border border-l-4 border-brand-gray-200 bg-white',
+        novo ? 'border-l-red-500' : 'border-l-emerald-500'
+      )}
+    >
+      {/* Cabeçalho sempre visível — clique abre e fecha */}
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-5 py-4 text-left transition-colors hover:bg-brand-gray-50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm font-semibold text-brand-black">
+              {order.order_ref}
+            </span>
+            {novo && (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-700">
+                Novo
+              </span>
+            )}
+            <span className="rounded-full bg-brand-gray-100 px-2 py-0.5 text-[11px] font-semibold text-brand-gray-700">
+              {orderStatusLabel(order.status)}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-sm text-brand-gray-700">
+            {order.customer_name || 'Cliente sem nome'} ·{' '}
             {order.items?.map((i) => `${i.quantity}× ${i.name}`).join(', ')}
           </p>
-          {addr && (
-            <p className="mt-1 text-xs text-brand-gray-500">
-              {addr.street}, {addr.number} — {addr.city}/{addr.state} · {addr.zipCode}
+          <p className="mt-0.5 text-xs text-brand-gray-500">
+            {new Date(order.created_at).toLocaleString('pt-BR')}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold text-brand-black">
+            {formatPrice(order.total, order.currency)}
+          </span>
+          <span
+            className={clsx('text-brand-gray-400 transition-transform', open && 'rotate-180')}
+            aria-hidden
+          >
+            ▾
+          </span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-brand-gray-100 px-5 py-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Cliente">
+              <p className="font-medium text-brand-black">{order.customer_name || '—'}</p>
+              {order.customer_email && (
+                <a href={`mailto:${order.customer_email}`} className="block underline">
+                  {order.customer_email}
+                </a>
+              )}
+              {order.customer_phone && (
+                <a
+                  href={whatsappLink(order.customer_phone)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block underline"
+                >
+                  {order.customer_phone} (WhatsApp)
+                </a>
+              )}
+            </Field>
+
+            <Field label="Entrega">
+              <p>{order.shipping_method || 'Forma de envio não registrada'}</p>
+              {addr ? (
+                <p className="mt-1">
+                  {addr.street}, {addr.number}
+                  {addr.complement ? ` — ${addr.complement}` : ''}
+                  <br />
+                  {addr.neighborhood ? `${addr.neighborhood}, ` : ''}
+                  {addr.city}/{addr.state}
+                  <br />
+                  CEP {addr.zipCode || addr.cep}
+                </p>
+              ) : (
+                <p className="mt-1 text-brand-gray-500">Endereço não registrado</p>
+              )}
+            </Field>
+
+            <Field label="Pagamento">
+              <p>
+                {order.payment_method
+                  ? PAYMENT_LABEL[order.payment_method] || order.payment_method
+                  : '—'}
+              </p>
+              <p className="mt-1 font-semibold text-brand-black">
+                {formatPrice(order.total, order.currency)}
+              </p>
+            </Field>
+
+            <Field label="Itens">
+              <ul className="space-y-2">
+                {order.items?.map((item, index) => (
+                  <li key={index}>
+                    <p className="font-medium text-brand-black">
+                      {item.quantity}× {item.name}
+                    </p>
+                    {itemDetails(item) && (
+                      <p className="text-xs text-brand-gray-500">{itemDetails(item)}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Field>
+          </div>
+
+          <div className="mt-6 grid gap-3 border-t border-brand-gray-100 pt-5 sm:grid-cols-2">
+            <div>
+              <label className="label-field">Status</label>
+              <select
+                className="select-field"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {orderStatusLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-field">Código de rastreio</label>
+              <input
+                className="input-field"
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                placeholder="BR123456789"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label-field">Link de rastreio (opcional)</label>
+              <input
+                className="input-field"
+                value={trackingUrl}
+                onChange={(e) => setTrackingUrl(e.target.value)}
+                placeholder="https://rastreamento.correios.com.br/..."
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-brand-gray-500">
+              Salvar atualiza o painel e a planilha ao mesmo tempo.
             </p>
-          )}
+            <Button size="sm" onClick={handleSave} loading={saving}>
+              Salvar alterações
+            </Button>
+          </div>
         </div>
-        <p className="text-lg font-bold text-brand-black">
-          {formatPrice(order.total, order.currency)}
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-3 border-t border-brand-gray-100 pt-4 sm:grid-cols-2">
-        <div>
-          <label className="label-field">Status</label>
-          <select className="select-field" value={status} onChange={(e) => setStatus(e.target.value)}>
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {orderStatusLabel(s)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label-field">Código de rastreio</label>
-          <input
-            className="input-field"
-            value={trackingCode}
-            onChange={(e) => setTrackingCode(e.target.value)}
-            placeholder="BR123456789"
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="label-field">Link de rastreio (opcional)</label>
-          <input
-            className="input-field"
-            value={trackingUrl}
-            onChange={(e) => setTrackingUrl(e.target.value)}
-            placeholder="https://rastreamento.correios.com.br/..."
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <Button size="sm" onClick={handleSave} loading={saving}>
-          Salvar alterações
-        </Button>
-      </div>
+      )}
     </li>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="text-sm text-brand-gray-700">
+      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-brand-gray-400">
+        {label}
+      </p>
+      {children}
+    </div>
   );
 }

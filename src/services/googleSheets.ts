@@ -641,14 +641,46 @@ export async function updateOrderStatusInSheet(
 export interface SheetOrderSummary {
   id: string;
   createdAt: string;
+  name: string;
   email: string;
+  phone: string;
+  /** Forma de pagamento como está na planilha ('Pix', 'Cartão'…). */
+  paymentMethod: string;
+  /** Coluna "Transportadora", vazia nos pedidos anteriores à coluna existir. */
+  carrier: string;
   total: number;
   currency: string;
   /** Status cru do gateway ('approved', 'pending'…). */
   gatewayStatus: string;
   shippingStage: string;
   tracking: string;
-  items: { name: string; quantity: number; price: number }[];
+  items: { name: string; quantity: number; price: number; details: string }[];
+}
+
+/**
+ * Junta as colunas de personalização numa linha só, para o painel mostrar o
+ * que precisa ser produzido sem abrir a planilha.
+ */
+function itemDetailsFrom(tab: SheetTab, cell: (key: string) => string): string {
+  const parts =
+    tab.name === 'Faixas'
+      ? [
+          cell('size') && `Tamanho ${cell('size')}`,
+          cell('degree') && `${cell('degree')} grau(s)`,
+          cell('finish'),
+          cell('embroideredName') && `Nome: ${cell('embroideredName')}`,
+          cell('nameFont'),
+          cell('nameColor') && `Bordado ${cell('nameColor')}`,
+          cell('stripe') && `Ponteira ${cell('stripe')}`,
+        ]
+      : [
+          cell('size') && `Tamanho ${cell('size')}`,
+          cell('format'),
+          cell('dimensions'),
+          cell('artwork') && `Arte: ${cell('artwork')}`,
+        ];
+
+  return parts.filter(Boolean).join(' · ');
 }
 
 /**
@@ -713,6 +745,7 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
           name: productNameFrom(tab, cell),
           quantity,
           price: Math.round((lineValue / quantity) * 100) / 100,
+          details: itemDetailsFrom(tab, cell),
         };
 
         const existing = byId.get(id);
@@ -724,7 +757,11 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
         byId.set(id, {
           id,
           createdAt: cell('createdAt'),
+          name: cell('name'),
           email: cell('email'),
+          phone: cell('phone'),
+          paymentMethod: cell('paymentMethod'),
+          carrier: cell('carrier'),
           total: parseFloat(cell('total')) || 0,
           currency: cell('currency') || 'BRL',
           gatewayStatus: statusRaw(cell('status')) || 'pending',
@@ -739,5 +776,81 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
   } catch (error) {
     console.error('[sheets] Falha ao buscar pedidos por e-mail:', error);
     return [];
+  }
+}
+
+/** Status do painel → coluna "Envio" da planilha. */
+const STATUS_TO_STAGE: Record<string, string> = {
+  confirmed: 'A produzir',
+  processing: 'Em produção',
+  shipped: 'Postado',
+  delivered: 'Entregue',
+};
+
+/**
+ * Leva para a planilha o que a loja mudou no painel: etapa do envio e
+ * rastreio.
+ *
+ * Existe porque as duas telas mostravam a mesma venda com informações
+ * diferentes — o painel dizia "Em produção" e a planilha continuava vazia.
+ * Quem edita no painel agora atualiza os dois lugares de uma vez.
+ *
+ * A coluna "Status" NÃO é tocada aqui: ela é do gateway, e é por ela que o
+ * webhook sabe se já mandou o e-mail de pagamento confirmado.
+ */
+export async function updateOrderShippingInSheet(
+  orderId: string,
+  status: string,
+  tracking: string
+): Promise<number> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return 0;
+
+  const stage = sanitizeSheetValue(STATUS_TO_STAGE[status] ?? '');
+  const trackingValue = sanitizeSheetValue(tracking);
+  let updated = 0;
+
+  try {
+    const sheets = await getSheetsClient();
+
+    // O mesmo pedido pode ter linhas nas duas abas (patch + faixa no carrinho).
+    for (const tab of TABS) {
+      let rows: string[][];
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: fullRange(tab),
+        });
+        rows = (response.data.values as string[][]) || [];
+      } catch {
+        continue;
+      }
+
+      const shippingColumn = columnLetter(indexOf(tab, 'shipping'));
+      const trackingColumn = columnLetter(indexOf(tab, 'tracking'));
+
+      for (let index = 0; index < rows.length; index += 1) {
+        if (rows[index][0] !== orderId) continue;
+        const line = index + 1;
+
+        await sheets.spreadsheets.values.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            valueInputOption: 'RAW',
+            data: [
+              { range: `${tab.name}!${shippingColumn}${line}`, values: [[stage]] },
+              { range: `${tab.name}!${trackingColumn}${line}`, values: [[trackingValue]] },
+            ],
+          },
+        });
+        updated += 1;
+      }
+    }
+
+    if (updated === 0) console.warn(`[sheets] pedido ${orderId} não encontrado`);
+    return updated;
+  } catch (error) {
+    console.error('[sheets] falha ao atualizar envio:', error);
+    return 0;
   }
 }
