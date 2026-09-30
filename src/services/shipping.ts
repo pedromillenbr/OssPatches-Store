@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ViaCEPResponse, ShippingOption } from '@/types';
+import { ViaCEPResponse, ShippingOption, CartItem } from '@/types';
 
 export async function lookupCEP(cep: string): Promise<ViaCEPResponse> {
   const clean = cep.replace(/\D/g, '');
@@ -11,9 +11,13 @@ export async function lookupCEP(cep: string): Promise<ViaCEPResponse> {
   return data;
 }
 
+/**
+ * Cotação de frete. Mandamos os itens do carrinho como estão — quem calcula
+ * peso e medidas é o servidor, pelo tamanho de cada faixa.
+ */
 export async function quoteBrazilianShipping(
   destinationCEP: string,
-  items: { weight: number; width: number; height: number; length: number; quantity: number }[]
+  items: CartItem[]
 ): Promise<ShippingOption[]> {
   const response = await axios.post<ShippingOption[]>('/api/shipping/quote', {
     destination: destinationCEP,

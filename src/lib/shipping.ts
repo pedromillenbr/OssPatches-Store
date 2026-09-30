@@ -1,4 +1,5 @@
 import { CONFIG } from '@/config';
+import { parcelFor } from '@/lib/productWeight';
 import type { CartItem } from '@/types';
 
 /**
@@ -11,20 +12,6 @@ import type { CartItem } from '@/types';
  * Melhor Envio com nossa própria credencial) e validamos o valor que o cliente
  * enviou contra as opções reais.
  */
-
-// Dimensões físicas de cada tipo de produto (para o Melhor Envio calcular).
-// O cliente NÃO envia isso — derivamos do catálogo no servidor.
-function dimensionsFor(item: CartItem) {
-  const isPatch = item.category === 'patch';
-  const d = isPatch ? CONFIG.patchDimensions : CONFIG.beltDimensions;
-  return {
-    weight: d.weight,
-    width: d.width,
-    height: d.height,
-    length: d.length,
-    quantity: Math.min(100, Math.max(1, Number(item.quantity) || 1)),
-  };
-}
 
 interface MelhorEnvioService {
   id: number;
@@ -58,7 +45,7 @@ export async function getServerShippingPrices(
   const payload = {
     from: { postal_code: CONFIG.originCEP.replace(/\D/g, '') },
     to: { postal_code: cep },
-    products: items.map(dimensionsFor),
+    products: items.map(parcelFor),
     options: { receipt: false, own_hand: false },
     services: ALLOWED_SERVICES.join(','),
   };

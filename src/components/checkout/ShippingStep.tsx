@@ -6,7 +6,6 @@ import {
   getInternationalShippingOptions,
 } from '@/services/shipping';
 import { useCartStore } from '@/store/cartStore';
-import { CONFIG } from '@/config';
 import { formatPrice } from '@/services/products';
 import Button from '@/components/ui/Button';
 import clsx from 'clsx';
@@ -28,12 +27,8 @@ export default function ShippingStep() {
       setError(null);
 
       if (isBrazil && address?.zipCode) {
-        const shippingItems = items.map((item) => ({
-          ...CONFIG.beltDimensions,
-          quantity: item.quantity,
-        }));
         try {
-          const opts = await quoteBrazilianShipping(address.zipCode, shippingItems);
+          const opts = await quoteBrazilianShipping(address.zipCode, items);
           setOptions(opts);
         } catch (err) {
           setError('Não foi possível calcular o frete para este CEP. Verifique o endereço ou tente novamente.');

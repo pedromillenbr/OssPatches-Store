@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ShippingOption } from '@/types';
+import { ShippingOption, CartItem } from '@/types';
 import { CONFIG } from '@/config';
+import { parcelFor } from '@/lib/productWeight';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
 import { isBodyTooLarge } from '@/lib/sanitize';
 import { handleCors } from '@/lib/cors';
@@ -32,7 +33,7 @@ export default async function handler(
 
   const { destination, items } = req.body;
 
-  if (!destination || !items) {
+  if (!destination || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Missing destination or items' });
   }
 
@@ -53,13 +54,10 @@ export default async function handler(
   const payload = {
     from: { postal_code: CONFIG.originCEP.replace(/\D/g, '') },
     to: { postal_code: destination.replace(/\D/g, '') },
-    products: items.map((item: { weight: number; width: number; height: number; length: number; quantity: number }) => ({
-      weight: item.weight,
-      width: item.width,
-      height: item.height,
-      length: item.length,
-      quantity: item.quantity,
-    })),
+    // Peso e medidas saem DAQUI, do servidor, pelo tamanho de cada faixa.
+    // Antes vinham prontos do navegador: dava para pedir cotação de 10 g e a
+    // loja pagar a diferença na hora de postar.
+    products: (items as CartItem[]).map(parcelFor),
     options: { receipt: false, own_hand: false },
     services: ALLOWED_SERVICES.join(','),
   };
