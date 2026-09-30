@@ -223,6 +223,19 @@ const CLOSING: SheetColumn[] = [
   // (pedido de convidado não existe no Banco de Dados). Aceita o código puro
   // ou a URL completa da transportadora — a página trata os dois casos.
   { key: 'tracking', header: 'Rastreio', value: () => '' },
+  // Forma de envio escolhida pelo cliente no checkout. Fica por último de
+  // propósito: o cabeçalho é reescrito pelo código, e acrescentar no fim não
+  // desloca nada do que já está gravado nas linhas antigas.
+  {
+    key: 'carrier',
+    header: 'Transportadora',
+    value: ({ order }) => {
+      if (!order.shipping) return '';
+      const nome = [order.shipping.company, order.shipping.name].filter(Boolean).join(' ');
+      const prazo = text(order.shipping.days);
+      return prazo ? nome + ' - ' + prazo : nome;
+    },
+  },
 ];
 
 const PATCH_COLUMNS: SheetColumn[] = [
