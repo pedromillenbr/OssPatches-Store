@@ -8,6 +8,7 @@ import { useRequireAdmin } from '@/hooks/useRequireAdmin';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/services/products';
 import { ALL_STATUSES, orderStatusLabel } from '@/lib/orderStatus';
+import { authHeader } from '@/lib/authHeader';
 
 interface AdminOrder {
   id: string;
@@ -26,18 +27,48 @@ export default function AdminOrdersPage() {
   const { ready } = useRequireAdmin();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+
+  const loadOrders = async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('id, order_ref, status, total, currency, items, address, tracking_code, tracking_url, created_at')
+      .order('created_at', { ascending: false });
+    setOrders((data as AdminOrder[]) ?? []);
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (!ready) return;
-    supabase
-      .from('orders')
-      .select('id, order_ref, status, total, currency, items, address, tracking_code, tracking_url, created_at')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setOrders((data as AdminOrder[]) ?? []);
-        setLoading(false);
-      });
+    loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  // Traz da planilha os pedidos que nunca chegaram ao Banco de Dados — os que
+  // foram feitos antes da correção, quando quem gravava era o navegador do
+  // cliente. Pedido já existente aqui não é tocado.
+  const handleImport = async () => {
+    setImporting(true);
+    try {
+      const res = await fetch('/api/admin/import-orders', {
+        method: 'POST',
+        headers: await authHeader(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.imported > 0) {
+        toast.success(` pedido(s) recuperado(s)`);
+        await loadOrders();
+      } else {
+        toast.success('Tudo em dia — nenhum pedido faltando.');
+      }
+    } catch {
+      toast.error('Não foi possível importar agora. Tente de novo.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   if (!ready) {
     return (
@@ -53,6 +84,16 @@ export default function AdminOrdersPage() {
     <Layout>
       <NextSeo title="Admin — Pedidos" noindex />
       <AdminLayout title="Pedidos">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-gray-200 bg-brand-gray-50 px-4 py-3">
+          <p className="text-sm text-brand-gray-600">
+            Faltando algum pedido aqui? Traga do controle interno — o que já está
+            na lista não é alterado.
+          </p>
+          <Button onClick={handleImport} disabled={importing} variant="secondary" className="shrink-0">
+            {importing ? 'Importando…' : 'Importar pedidos'}
+          </Button>
+        </div>
+
         {loading ? (
           <div className="space-y-4">
             {[0, 1, 2].map((i) => (
@@ -60,7 +101,9 @@ export default function AdminOrdersPage() {
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <p className="text-brand-gray-500">Nenhum pedido ainda.</p>
+          <p className="text-brand-gray-500">
+            Nenhum pedido na lista. Se você já vendeu, use “Importar pedidos” acima.
+          </p>
         ) : (
           <ul className="space-y-4">
             {orders.map((order) => (

@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { CartItem, Order } from '@/types';
 import { sanitizeSheetValue } from '@/lib/sanitize';
+import { ORDER_ID_REGEX } from '@/lib/checkoutGuards';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -649,11 +650,22 @@ export interface SheetOrderSummary {
  * agrupamos tudo pelo número do pedido.
  */
 export async function getOrdersByEmailFromSheet(email: string): Promise<SheetOrderSummary[]> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  if (!spreadsheetId) return [];
-
   const wanted = email.trim().toLowerCase();
   if (!wanted) return [];
+  return readOrdersFromSheet(wanted);
+}
+
+/**
+ * Todos os pedidos da planilha, para o painel do admin reconstruir a lista.
+ */
+export async function getAllOrdersFromSheet(): Promise<SheetOrderSummary[]> {
+  return readOrdersFromSheet();
+}
+
+/** Lê a planilha inteira, opcionalmente só as linhas de um e-mail. */
+async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return [];
 
   try {
     const sheets = await getSheetsClient();
@@ -675,10 +687,12 @@ export async function getOrdersByEmailFromSheet(email: string): Promise<SheetOrd
         const cell = (key: string): string =>
           (row[indexOf(tab, key)] as string | undefined) || '';
 
-        if (cell('email').trim().toLowerCase() !== wanted) continue;
+        if (wanted && cell('email').trim().toLowerCase() !== wanted) continue;
 
-        const id = cell('id');
-        if (!id) continue;
+        // Descarta o cabeçalho e qualquer linha solta: só entra o que tem
+        // cara de número de pedido.
+        const id = cell('id').trim();
+        if (!ORDER_ID_REGEX.test(id)) continue;
 
         const quantity = parseInt(cell('quantity'), 10) || 1;
         const lineValue = parseFloat(cell('value')) || 0;
