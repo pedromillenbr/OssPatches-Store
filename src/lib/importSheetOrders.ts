@@ -28,7 +28,7 @@ export async function importSheetOrders(
     .from('orders')
     .select(
       'order_ref, customer_name, customer_phone, customer_email, payment_method, ' +
-        'shipping_method, address, items'
+        'shipping_method, shipping_cost, discount_amount, address, items'
     )
     .in('order_ref', orders.map((o) => o.id));
 
@@ -62,10 +62,9 @@ export async function importSheetOrders(
       order_ref: o.id,
       status,
       currency: o.currency,
-      // O total é o que o cliente pagou. Frete e desconto vêm das colunas
-      // novas; nos pedidos antigos elas estão vazias e ficam zeradas.
-      subtotal: Math.round((o.total - o.shippingCost + o.discountAmount) * 100) / 100,
-      shipping_cost: o.shippingCost,
+      // O total é o que o cliente pagou; o resto é a conta por trás dele.
+      subtotal: itemsTotal(o),
+      shipping_cost: shippingFrom(o),
       discount_amount: o.discountAmount,
       total: o.total,
       items: o.items,
@@ -88,6 +87,28 @@ export async function importSheetOrders(
   return rows.length;
 }
 
+/**
+ * Soma dos itens do pedido, como a planilha gravou linha a linha.
+ */
+function itemsTotal(o: SheetOrderSummary): number {
+  const sum = o.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  return Math.round(sum * 100) / 100;
+}
+
+/**
+ * Frete do pedido.
+ *
+ * A coluna "Frete" só existe a partir de agora. Nos pedidos anteriores ela
+ * está vazia, mas o valor dá para deduzir: é o que sobra do total depois dos
+ * itens. Nunca negativo — se a conta não fechar, preferimos zero a um número
+ * inventado.
+ */
+function shippingFrom(o: SheetOrderSummary): number {
+  if (o.shippingCost > 0) return o.shippingCost;
+  const resto = Math.round((o.total - itemsTotal(o) + o.discountAmount) * 100) / 100;
+  return resto > 0 ? resto : 0;
+}
+
 /** Linha do banco com os campos de identificação que podem estar em branco. */
 interface ExistingRow {
   order_ref: string;
@@ -96,6 +117,8 @@ interface ExistingRow {
   customer_email: string | null;
   payment_method: string | null;
   shipping_method: string | null;
+  shipping_cost: number | null;
+  discount_amount: number | null;
   address: Record<string, unknown> | null;
   items: ({ details?: string; customization?: unknown } | null)[] | null;
 }
@@ -142,6 +165,19 @@ async function fillBlanks(
     if (!raw.payment_method && sheet.paymentMethod) patch.payment_method = sheet.paymentMethod;
     if (!raw.shipping_method && sheet.carrier) patch.shipping_method = sheet.carrier;
     if (!raw.address) patch.address = addressFrom(sheet);
+
+    // Frete e desconto entraram zerados nas importações anteriores, quando a
+    // planilha ainda não tinha essas colunas.
+    if (!raw.shipping_cost) {
+      const frete = shippingFrom(sheet);
+      if (frete > 0) {
+        patch.shipping_cost = frete;
+        patch.subtotal = itemsTotal(sheet);
+      }
+    }
+    if (!raw.discount_amount && sheet.discountAmount > 0) {
+      patch.discount_amount = sheet.discountAmount;
+    }
 
     // Pedidos recuperados antes entraram sem a personalização de cada item —
     // justamente o que a produção precisa ler.
