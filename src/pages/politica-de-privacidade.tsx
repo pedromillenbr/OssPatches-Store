@@ -119,6 +119,13 @@ export default function PoliticaDePrivacidadePage() {
               <strong>Google</strong> (Sheets e Analytics) — gestão de pedidos e
               análise de acessos.
             </li>
+            <li>
+              <strong>Meta</strong> (Facebook e Instagram) — medição e otimização
+              dos nossos anúncios. Enviamos os eventos de navegação e de compra. Os
+              dados de contato usados para identificar você (e-mail, telefone, nome
+              e cidade) saem daqui sempre <strong>criptografados</strong>, nunca em
+              texto legível. Seu <strong>CPF nunca é enviado</strong>.
+            </li>
           </ul>
           <p>
             Cada um trata os dados apenas para a finalidade contratada e sob suas
@@ -128,10 +135,34 @@ export default function PoliticaDePrivacidadePage() {
 
         <Section n="6" title="Cookies">
           <p>
-            Usamos cookies essenciais (para o carrinho e o login funcionarem) e
-            cookies de análise (para entender o uso do site). Você pode bloquear
-            cookies nas configurações do seu navegador, mas algumas funções podem
-            deixar de funcionar corretamente.
+            Usamos cookies essenciais (para o carrinho e o login funcionarem),
+            cookies de análise (para entender o uso do site) e cookies de
+            publicidade do <strong>Google</strong> e da <strong>Meta</strong>, que
+            medem o resultado dos nossos anúncios e podem fazer com que você veja
+            nossas ofertas no Facebook e no Instagram.
+          </p>
+          <p>
+            Você pode bloquear cookies nas configurações do seu navegador, mas
+            algumas funções podem deixar de funcionar corretamente. Para limitar
+            apenas os anúncios, ajuste suas preferências nas{' '}
+            <a
+              href="https://www.facebook.com/adpreferences/ad_settings"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link"
+            >
+              preferências de anúncios da Meta
+            </a>{' '}
+            e nas{' '}
+            <a
+              href="https://adssettings.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link"
+            >
+              configurações de anúncios do Google
+            </a>
+            .
           </p>
         </Section>
 
