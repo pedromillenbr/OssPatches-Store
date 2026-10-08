@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { CartItem, Order } from '@/types';
 import { sanitizeSheetValue } from '@/lib/sanitize';
 import { ORDER_ID_REGEX } from '@/lib/checkoutGuards';
+import { formatCPF } from '@/lib/cpf';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -240,6 +241,10 @@ const CLOSING: SheetColumn[] = [
   // conferir quanto sobrou da venda nem o que foi pago à transportadora.
   { key: 'shippingCost', header: 'Frete', value: ({ order }) => money(order.shippingCost) },
   { key: 'discount', header: 'Desconto', value: ({ order }) => money(order.discountAmount ?? 0) },
+  // CPF de quem comprou, para nota fiscal e etiqueta. Só pedidos do Brasil
+  // têm. Também no fim, pelo mesmo motivo da Transportadora: não desloca as
+  // linhas antigas.
+  { key: 'cpf', header: 'CPF', value: ({ order }) => (order.customer.cpf ? formatCPF(order.customer.cpf) : '') },
 ];
 
 const PATCH_COLUMNS: SheetColumn[] = [
@@ -399,15 +404,39 @@ export async function ensureSheetLayout(spreadsheetId: string, sheets?: SheetsCl
   // 2. Cabeçalhos — reescritos só quando não batem com o código.
   const refreshed = missing.length > 0 ? await client.spreadsheets.get({ spreadsheetId }) : meta;
   const sheetIdByName = new Map<string, number>();
+  const gridWidthByName = new Map<string, number>();
   (refreshed.data.sheets || []).forEach((sheet) => {
     const title = sheet.properties?.title;
     const id = sheet.properties?.sheetId;
     if (title && typeof id === 'number') sheetIdByName.set(title, id);
+    if (title) gridWidthByName.set(title, sheet.properties?.gridProperties?.columnCount ?? 0);
   });
 
   for (const tab of TABS) {
     const headers = tab.columns.map((column) => column.header);
     const lastColumn = columnLetter(tab.columns.length - 1);
+
+    // A aba pode ter menos colunas do que o código precisa (o Sheets não
+    // alarga sozinho). Sem isto, gravar uma coluna nova dá erro de "fora da
+    // grade" e o pedido inteiro deixa de entrar na planilha.
+    const width = gridWidthByName.get(tab.name) ?? 0;
+    const tabId = sheetIdByName.get(tab.name);
+    if (tabId !== undefined && width > 0 && width < tab.columns.length) {
+      await client.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              appendDimension: {
+                sheetId: tabId,
+                dimension: 'COLUMNS',
+                length: tab.columns.length - width,
+              },
+            },
+          ],
+        },
+      });
+    }
 
     const current = await client.spreadsheets.values.get({
       spreadsheetId,
@@ -648,6 +677,8 @@ export interface SheetOrderSummary {
   name: string;
   email: string;
   phone: string;
+  /** Vazio nos pedidos anteriores à coluna existir e nos de fora do Brasil. */
+  cpf: string;
   /** Forma de pagamento como está na planilha ('Pix', 'Cartão'…). */
   paymentMethod: string;
   /** Coluna "Transportadora", vazia nos pedidos anteriores à coluna existir. */
@@ -770,6 +801,7 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
           name: cell('name'),
           email: cell('email'),
           phone: cell('phone'),
+          cpf: cell('cpf'),
           paymentMethod: cell('paymentMethod'),
           carrier: cell('carrier'),
           zipCode: cell('zipCode'),

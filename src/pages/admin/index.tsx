@@ -35,6 +35,7 @@ interface AdminOrder {
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
+  customer_cpf?: string | null;
   payment_method: string | null;
   shipping_method: string | null;
   tracking_code: string | null;
@@ -64,10 +65,13 @@ export default function AdminOrdersPage() {
   const [migrationPending, setMigrationPending] = useState(false);
 
   const loadOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(SELECT_COLUMNS)
-      .order('created_at', { ascending: false });
+    // O CPF vem numa coluna mais nova (supabase/orders_cpf.sql). Se ela ainda
+    // não existe, a lista carrega igual, só sem o CPF.
+    const fetchOrders = (columns: string) =>
+      supabase.from('orders').select(columns).order('created_at', { ascending: false });
+
+    let { data, error } = await fetchOrders(`${SELECT_COLUMNS}, customer_cpf`);
+    if (error) ({ data, error } = await fetchOrders(SELECT_COLUMNS));
 
     if (error) {
       // As colunas novas (cliente, envio, "já vi") só existem depois de rodar
@@ -397,6 +401,7 @@ function AdminOrderRow({
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Cliente">
               <p className="font-medium text-brand-black">{order.customer_name || '—'}</p>
+              {order.customer_cpf && <p>CPF {order.customer_cpf}</p>}
               {order.customer_email && (
                 <a href={`mailto:${order.customer_email}`} className="block underline">
                   {order.customer_email}

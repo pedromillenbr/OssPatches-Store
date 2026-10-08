@@ -23,12 +23,17 @@ export async function importSheetOrders(
   const admin = getSupabaseAdmin();
   if (!admin || !orders.length) return 0;
 
+  // A coluna do CPF só existe depois de rodar supabase/orders_cpf.sql. Sem
+  // ela a importação segue igual, só não leva o CPF.
+  const hasCpf = !(await admin.from('orders').select('customer_cpf').limit(1)).error;
+
   // Quais já estão no banco? Só inserimos o que falta.
   const { data: existing } = await admin
     .from('orders')
     .select(
       'order_ref, customer_name, customer_phone, customer_email, payment_method, ' +
-        'shipping_method, shipping_cost, discount_amount, address, items'
+        'shipping_method, shipping_cost, discount_amount, address, items' +
+        (hasCpf ? ', customer_cpf' : '')
     )
     .in('order_ref', orders.map((o) => o.id));
 
@@ -39,7 +44,7 @@ export async function importSheetOrders(
   // antiga, ou espelho gravado antes destas colunas existirem). Preenchemos
   // SÓ o que está em branco — status, rastreio e valores ficam como estão,
   // porque podem ter sido ajustados à mão no painel.
-  await fillBlanks(admin, rows0, orders);
+  await fillBlanks(admin, rows0, orders, hasCpf);
 
   const missing = orders.filter((o) => !known.has(o.id));
   if (!missing.length) return 0;
@@ -57,6 +62,7 @@ export async function importSheetOrders(
       customer_email: o.email.trim().toLowerCase() || null,
       customer_name: o.name || null,
       customer_phone: o.phone || null,
+      ...(hasCpf ? { customer_cpf: o.cpf || null } : {}),
       payment_method: o.paymentMethod || null,
       shipping_method: o.carrier || null,
       order_ref: o.id,
@@ -115,6 +121,7 @@ interface ExistingRow {
   customer_name: string | null;
   customer_phone: string | null;
   customer_email: string | null;
+  customer_cpf?: string | null;
   payment_method: string | null;
   shipping_method: string | null;
   shipping_cost: number | null;
@@ -148,7 +155,8 @@ function addressFrom(o: SheetOrderSummary): Record<string, string> | null {
 async function fillBlanks(
   admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
   existing: ExistingRow[],
-  orders: SheetOrderSummary[]
+  orders: SheetOrderSummary[],
+  hasCpf: boolean
 ): Promise<void> {
   const bySheetRef = new Map(orders.map((o) => [o.id, o]));
 
@@ -162,6 +170,7 @@ async function fillBlanks(
     if (!raw.customer_email && sheet.email) {
       patch.customer_email = sheet.email.trim().toLowerCase();
     }
+    if (hasCpf && !raw.customer_cpf && sheet.cpf) patch.customer_cpf = sheet.cpf;
     if (!raw.payment_method && sheet.paymentMethod) patch.payment_method = sheet.paymentMethod;
     if (!raw.shipping_method && sheet.carrier) patch.shipping_method = sheet.carrier;
     if (!raw.address) patch.address = addressFrom(sheet);
