@@ -270,13 +270,16 @@ export async function sendAccountCreatedEmail(input: {
       Não quer ter conta? É só responder este e-mail que a gente apaga.
     </p>`;
 
-  await resend.emails.send({
+  // A Resend devolve o erro em vez de lançar. Sem registrar, a conta seria
+  // criada e o cliente nunca saberia — e nós também não.
+  const { error } = await resend.emails.send({
     from: FROM,
     replyTo: REPLY_TO,
     to: input.email,
     subject: 'Sua conta na OssPatches — crie sua senha',
     html: baseLayout(content),
   });
+  if (error) console.error('[email] conta criada:', error.message);
 }
 
 /**
