@@ -64,8 +64,8 @@ export default function SuccessStep() {
         </Link>
 
         {/*
-          Quem comprou sem conta não tem "Meus pedidos" — sem este caminho, a
-          única forma de saber do pedido seria chamar no WhatsApp.
+          Quem comprou sem conta ganha uma assim que o pagamento entra, mas até
+          escolher a senha este é o caminho para saber do pedido.
         */}
         <p className="text-sm text-brand-gray-500">
           Guarde o número do pedido: você acompanha tudo em{' '}

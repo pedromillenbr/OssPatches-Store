@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { ensureAccountForOrder } from '@/lib/autoAccount';
 
 /**
  * Marca o pedido do cliente como "Pagamento confirmado" no Banco de Dados.
@@ -36,6 +37,9 @@ export async function markOrderPaidInDb(orderRef: string): Promise<void> {
     // ou pedido que o admin já adiantou para um status posterior.
     if (data?.length) {
       console.log(`[orderPaymentSync] ${orderRef} → confirmed`);
+      // Só na virada para "pago", que acontece uma vez por pedido: quem
+      // comprou sem cadastro ganha a conta agora.
+      await ensureAccountForOrder(orderRef);
     }
   } catch (err) {
     console.error(`[orderPaymentSync] ${orderRef} (inesperado):`, err);

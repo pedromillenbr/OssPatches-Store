@@ -61,8 +61,11 @@ export default function TermosDeUsoPage() {
 
         <Section n="2" title="Conta de cliente">
           <p>
-            Você pode comprar como convidado ou criar uma conta. Com conta, você
-            acompanha seus pedidos e guarda seus interesses. Os dados que você
+            Você não precisa criar conta para comprar. Quando o pagamento é
+            confirmado, criamos uma conta com o e-mail da compra e enviamos um
+            link para você escolher a senha — se preferir não ter conta, é só
+            pedir que a gente apaga. Com conta, você acompanha seus pedidos e
+            guarda seus interesses. Os dados que você
             informa devem ser verdadeiros e atualizados — endereço ou CPF errados
             impedem a entrega e a emissão da nota.
           </p>

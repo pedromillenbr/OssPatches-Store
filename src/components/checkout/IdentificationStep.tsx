@@ -210,6 +210,13 @@ export default function IdentificationStep() {
       <Button type="submit" size="lg" fullWidth className="mt-2">
         Continuar → Endereço
       </Button>
+
+      {!user && (
+        <p className="text-center text-xs text-brand-gray-500">
+          Sem cadastro agora: depois do pagamento criamos sua conta com este e-mail
+          para você acompanhar o pedido.
+        </p>
+      )}
     </form>
   );
 }

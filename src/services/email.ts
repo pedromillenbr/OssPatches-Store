@@ -237,6 +237,49 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
 }
 
 /**
+ * Aviso de que a conta foi criada sozinha depois da compra, com o link para
+ * escolher a senha. Sem este e-mail a conta existiria sem o cliente saber.
+ */
+export async function sendAccountCreatedEmail(input: {
+  email: string;
+  firstName?: string | null;
+  passwordUrl: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const greeting = input.firstName ? `, ${esc(input.firstName)}` : '';
+
+  const content = `
+    <h1 style="margin:0 0 8px;font-size:24px;color:#000">Sua conta está pronta${greeting}</h1>
+    <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6">
+      Criamos uma conta na OssPatches com este e-mail para você acompanhar seu pedido
+      e não precisar digitar seus dados de novo na próxima compra. Falta só escolher uma senha.
+    </p>
+
+    <div style="margin:0 0 24px;text-align:center">
+      <a href="${esc(input.passwordUrl)}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px">
+        Criar minha senha
+      </a>
+    </div>
+
+    <p style="margin:0 0 12px;color:#888;font-size:13px;line-height:1.6">
+      O botão funciona uma vez e por tempo limitado. Se ele expirar, peça um novo em
+      <a href="${CONFIG.siteUrl}/senha-perdida" style="color:#000">${CONFIG.siteUrl.replace(/^https?:\/\//, '')}/senha-perdida</a>.
+    </p>
+    <p style="margin:0;color:#888;font-size:13px;line-height:1.6">
+      Não quer ter conta? É só responder este e-mail que a gente apaga.
+    </p>`;
+
+  await resend.emails.send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to: input.email,
+    subject: 'Sua conta na OssPatches — crie sua senha',
+    html: baseLayout(content),
+  });
+}
+
+/**
  * Lembrete de carrinho abandonado. Um por carrinho, sem desconto: a ideia é
  * lembrar de algo que a pessoa escolheu, não comprar a venda de volta.
  *

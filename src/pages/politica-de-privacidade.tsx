@@ -42,9 +42,11 @@ export default function PoliticaDePrivacidadePage() {
           <p>Coletamos apenas o necessário para vender e entregar seus produtos:</p>
           <ul>
             <li>
-              <strong>Dados de cadastro</strong> (quando você cria uma conta): nome,
+              <strong>Dados de cadastro</strong> (quando você cria uma conta, ou
+              quando ela é criada automaticamente após a sua primeira compra): nome,
               e-mail, senha (armazenada de forma criptografada) e, opcionalmente,
-              telefone e foto de perfil.
+              telefone e foto de perfil. Na conta criada pela compra também ficam
+              o CPF e o endereço informados no pedido.
             </li>
             <li>
               <strong>Dados de pedido e entrega</strong>: nome, CPF (para pedidos no
