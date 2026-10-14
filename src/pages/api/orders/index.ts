@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { paymentNotificationUrl } from '@/lib/paymentSync';
 import { Order } from '@/types';
 import { appendOrderToSheet } from '@/services/googleSheets';
 import { markCartRecovered } from '@/lib/abandonedCart';
@@ -44,6 +45,9 @@ async function createPixPayment(order: Order, total: number): Promise<{
         : {}),
     },
     external_reference: order.id,
+    // Sem isto o Mercado Pago não avisa o site quando o pagamento entra, e o
+    // pedido fica "Aguardando pagamento" até alguém conferir na mão.
+    ...(paymentNotificationUrl() ? { notification_url: paymentNotificationUrl() } : {}),
   };
 
   const res = await fetch('https://api.mercadopago.com/v1/payments', {

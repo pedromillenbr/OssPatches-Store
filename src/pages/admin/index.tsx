@@ -242,6 +242,7 @@ function itemDetails(item: AdminOrderItem): string {
     str('size') && `Tamanho ${str('size')}`,
     str('degree') && `${str('degree')} grau(s)`,
     str('format'),
+    str('dimensions'),
     c.type === 'custom' ? 'Personalizada' : '',
     str('embroideredName') && `Nome: ${str('embroideredName')}`,
     str('nameColor') && `Bordado ${str('nameColor')}`,
@@ -250,6 +251,50 @@ function itemDetails(item: AdminOrderItem): string {
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/** Patches do kit, um por linha: "Patch 1: P · circulo · Diâm. 10cm". */
+function kitLines(item: AdminOrderItem): string[] {
+  const list = item.customization?.items;
+  if (!Array.isArray(list)) return [];
+  return list.map((p: Record<string, unknown>, index) =>
+    [`Patch ${index + 1}: ${p.size ?? ''}`, p.format, p.dimensions, p.artworkFileName && `Arte: ${p.artworkFileName}`]
+      .filter(Boolean)
+      .join(' · ')
+  );
+}
+
+/** Artes enviadas no item (uma no patch avulso, várias no kit). */
+function itemArtworks(item: AdminOrderItem): { label: string; path: string }[] {
+  const c = item.customization;
+  if (!c) return [];
+  const list = Array.isArray(c.items) ? (c.items as Record<string, unknown>[]) : [c];
+  return list
+    .map((p, index) => ({
+      label: list.length > 1 ? `Abrir arte do patch ${index + 1}` : 'Abrir arte',
+      path: typeof p.artworkPath === 'string' ? p.artworkPath : '',
+    }))
+    .filter((a) => a.path);
+}
+
+/**
+ * Abre a arte numa aba nova. A aba é aberta antes da chamada ao servidor para
+ * o navegador não tratar como pop-up; o link assinado vale 10 minutos.
+ */
+async function openArtwork(path: string) {
+  const tab = window.open('', '_blank');
+  try {
+    const res = await fetch(`/api/admin/artwork?path=${encodeURIComponent(path)}`, {
+      headers: await authHeader(),
+    });
+    const body = await res.json();
+    if (!res.ok || !body.url) throw new Error(body.error || 'Arte não encontrada.');
+    if (tab) tab.location.href = body.url;
+    else window.location.href = body.url;
+  } catch (err) {
+    tab?.close();
+    toast.error(err instanceof Error ? err.message : 'Não foi possível abrir a arte.');
+  }
 }
 
 /**
@@ -461,6 +506,19 @@ function AdminOrderRow({
                     {itemDetails(item) && (
                       <p className="text-xs text-brand-gray-500">{itemDetails(item)}</p>
                     )}
+                    {kitLines(item).map((line) => (
+                      <p key={line} className="text-xs text-brand-gray-500">{line}</p>
+                    ))}
+                    {itemArtworks(item).map((art) => (
+                      <button
+                        key={art.path}
+                        type="button"
+                        onClick={() => openArtwork(art.path)}
+                        className="mt-1 mr-3 text-xs font-semibold text-brand-black underline underline-offset-2"
+                      >
+                        {art.label}
+                      </button>
+                    ))}
                   </li>
                 ))}
               </ul>

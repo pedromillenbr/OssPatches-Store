@@ -90,6 +90,9 @@ const LIMITS: Record<string, LimiterConfig> = {
   // Recuperação dos pedidos antigos do cliente logado. Lê a planilha inteira,
   // então basta uma vez a cada abertura da página de pedidos.
   'order-import': { requests: 6, window: '5 m' },
+  // Link de envio da arte do patch. Rota pública; o teto cobre um kit com
+  // algumas trocas de arquivo sem deixar ninguém lotar o Banco de Dados.
+  'artwork-upload': { requests: 15, window: '10 m' },
 };
 
 // ---------------------------------------------------------------------------

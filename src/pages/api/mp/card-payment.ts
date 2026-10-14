@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { paymentNotificationUrl } from '@/lib/paymentSync';
 import { appendOrderToSheet } from '@/services/googleSheets';
 import { markCartRecovered } from '@/lib/abandonedCart';
 import { sendOrderConfirmationEmail } from '@/services/email';
@@ -95,6 +96,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : {}),
     },
     external_reference: orderId,
+    // Sem isto o Mercado Pago não avisa o site quando o pagamento entra, e o
+    // pedido fica "Aguardando pagamento" até alguém conferir na mão.
+    ...(paymentNotificationUrl() ? { notification_url: paymentNotificationUrl() } : {}),
     statement_descriptor: 'OSSPATCHES',
     // 3DS 2.0 ("Verified by Visa"/"Mastercard Identity Check"). Em "optional" o
     // Mercado Pago só pede a confirmação do banco quando a transação é de

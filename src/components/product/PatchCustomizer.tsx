@@ -8,6 +8,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import DynamicMessage from '@/components/ui/DynamicMessage';
 import toast from 'react-hot-toast';
+import axios from 'axios';
+import { supabase } from '@/lib/supabase';
 import clsx from 'clsx';
 
 export const FORMAT_IMAGE_INDEX: Record<PatchFormat, number> = {
@@ -198,6 +200,30 @@ function whatsappLink(productName: string) {
       `Posso enviar a arte e as medidas por aqui?`
   );
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+}
+
+/**
+ * Sobe a arte para o Banco de Dados e devolve o caminho dela. O servidor
+ * escolhe o nome e assina um link de envio de uso único; o arquivo vai direto
+ * do navegador para o bucket privado.
+ */
+async function uploadArtwork(file: File): Promise<string> {
+  const { data } = await axios.post('/api/artwork/upload-url', {
+    contentType: file.type,
+    size: file.size,
+  });
+  const { error } = await supabase.storage
+    .from('artworks')
+    .uploadToSignedUrl(data.path, data.token, file, { contentType: file.type });
+  if (error) throw error;
+  return data.path as string;
+}
+
+function uploadErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err) && typeof err.response?.data?.error === 'string') {
+    return err.response.data.error;
+  }
+  return 'Não foi possível enviar a arte. Verifique a conexão e tente de novo.';
 }
 
 export default function PatchCustomizer({ product, onFormatChange }: PatchCustomizerProps) {
@@ -444,7 +470,18 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
       }
 
       setAdding(true);
-      await new Promise((r) => setTimeout(r, 400));
+
+      // A arte precisa chegar ao Banco de Dados antes do pedido existir — é
+      // dela que a produção depende.
+      let artworkPaths: string[];
+      try {
+        artworkPaths = await Promise.all(kitItems.map((item) => uploadArtwork(item.artworkFile!)));
+      } catch (err) {
+        console.error('[artwork] upload:', err);
+        toast.error(uploadErrorMessage(err));
+        setAdding(false);
+        return;
+      }
 
       addItem({
         productId: product.id,
@@ -456,10 +493,11 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
         image: product.images[0] || '',
         customization: {
           type: 'kit',
-          items: kitItems.map((item) => ({
+          items: kitItems.map((item, index) => ({
             size: item.size,
             format: item.format,
             artworkFileName: item.artworkFile?.name,
+            artworkPath: artworkPaths[index],
             dimensions: getDimensionsSummary(item.format, item),
           })),
         } as any,
@@ -500,7 +538,16 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
     }
 
     setAdding(true);
-    await new Promise((r) => setTimeout(r, 400));
+
+    let artworkPath: string;
+    try {
+      artworkPath = await uploadArtwork(artworkFile);
+    } catch (err) {
+      console.error('[artwork] upload:', err);
+      toast.error(uploadErrorMessage(err));
+      setAdding(false);
+      return;
+    }
 
     addItem({
       productId: product.id,
@@ -516,6 +563,7 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
         format,
         quantity,
         artworkFileName: artworkFile.name,
+        artworkPath,
         // Resumo legível das medidas — é o que viaja até o e-mail do pedido e a
         // planilha, para a produção saber o tamanho da peça.
         dimensions: getDimensionsSummary(format),

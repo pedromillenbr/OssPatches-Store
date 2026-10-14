@@ -1,5 +1,6 @@
 import productsData from '@/data/products.json';
 import { CartItem, ItemCustomization } from '@/types';
+import { isArtworkPath } from '@/lib/artwork';
 
 interface ProductEntry {
   id: string;
@@ -59,6 +60,25 @@ function cleanText(value: unknown): string | undefined {
 }
 
 /**
+ * Campos de um patch (ou de uma faixa) que a produção precisa: tamanho,
+ * formato, medidas e a arte enviada. `artworkPath` só passa se for um
+ * caminho gerado pelo nosso servidor (ver lib/artwork).
+ */
+function cleanPatchFields(c: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of ['size', 'format', 'stripe', 'embroideredName', 'artworkFileName', 'dimensions'] as const) {
+    const v = cleanText(c[key]);
+    if (v) out[key] = v;
+  }
+  if (isArtworkPath(c.artworkPath)) out.artworkPath = c.artworkPath;
+  for (const key of ['heightCm', 'widthCm', 'sideCm', 'diameterCm'] as const) {
+    const n = Number(c[key]);
+    if (c[key] !== undefined && c[key] !== null && Number.isFinite(n) && n > 0 && n <= 100) out[key] = n;
+  }
+  return out;
+}
+
+/**
  * Mantém só os campos de personalização conhecidos, com texto limitado.
  * Campos extras enviados pelo cliente são descartados.
  */
@@ -66,12 +86,17 @@ function cleanCustomization(raw: unknown): ItemCustomization {
   const c = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const type = c.type === 'custom' || c.type === 'team' ? c.type : 'standard';
   const out: Record<string, unknown> = { type };
-  for (const key of ['size', 'format', 'stripe', 'embroideredName', 'artworkFileName'] as const) {
-    const v = cleanText(c[key]);
-    if (v) out[key] = v;
-  }
+  Object.assign(out, cleanPatchFields(c));
   if (typeof c.artworkUrl === 'string' && /^https:\/\//.test(c.artworkUrl)) {
     out.artworkUrl = c.artworkUrl.slice(0, 500);
+  }
+  // Kit de patches: cada patch tem tamanho, formato, medidas e arte próprios.
+  // O preço não muda (o kit é cobrado como item padrão), mas sem isto a
+  // produção recebia o kit sem saber o que fazer.
+  if (Array.isArray(c.items)) {
+    out.items = c.items.slice(0, 10).map((raw) =>
+      cleanPatchFields((raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>)
+    );
   }
   if (c.degree !== undefined) {
     const d = Number(c.degree);

@@ -3,6 +3,8 @@ import { CartItem, Order } from '@/types';
 import { sanitizeSheetValue } from '@/lib/sanitize';
 import { ORDER_ID_REGEX } from '@/lib/checkoutGuards';
 import { formatCPF } from '@/lib/cpf';
+import { CONFIG } from '@/config';
+import { artworkAdminUrl, isArtworkPath } from '@/lib/artwork';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -135,14 +137,21 @@ function patchDimensions(customization: Record<string, unknown>): string {
   return text(customization.dimensions);
 }
 
+/** "arte.png — https://osspatches.com/admin/arte?path=..." (link pede login de admin). */
+function artworkCell(p: Record<string, unknown>): string {
+  const name = text(p.artworkFileName);
+  const link = isArtworkPath(p.artworkPath) ? artworkAdminUrl(CONFIG.siteUrl, p.artworkPath) : '';
+  return [name, link].filter(Boolean).join(' — ');
+}
+
 function patchArtwork(customization: Record<string, unknown>): string {
   if (isKit(customization)) {
     return kitItems(customization)
-      .map((p) => text(p.artworkFileName))
+      .map(artworkCell)
       .filter(Boolean)
       .join(' | ');
   }
-  return text(customization.artworkFileName);
+  return artworkCell(customization);
 }
 
 const BELT_COLORS = [

@@ -1,11 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
-import { updateOrderStatusInSheet, getOrderFromSheet } from '@/services/googleSheets';
-import { sendPaymentConfirmedEmail } from '@/services/email';
-import { Order } from '@/types';
-import { settlePixUse } from '@/lib/couponUsage';
-import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
-import { sendPurchaseToMeta } from '@/lib/metaCapi';
+import { applyPaymentStatus, notificationKey } from '@/lib/paymentSync';
 
 function validateSignature(req: NextApiRequest, secret: string): boolean {
   const xSignature = req.headers['x-signature'] as string;
@@ -65,7 +60,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Webhook not configured' });
     }
   } else {
-    const valid = validateSignature(req, secret);
+    // Duas formas de provar que o aviso é do Mercado Pago: a assinatura do
+    // painel (x-signature) ou a chave que nós mesmos colocamos na
+    // notification_url de cada pagamento.
+    const key = typeof req.query.key === 'string' ? req.query.key : '';
+    const expectedKey = notificationKey() ?? '';
+    const keyOk =
+      key.length === expectedKey.length &&
+      key.length > 0 &&
+      crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expectedKey));
+    const valid = keyOk || validateSignature(req, secret);
     if (!valid) {
       console.warn('[webhook] Invalid signature — request rejected');
       return res.status(401).json({ error: 'Invalid signature' });
@@ -92,46 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[webhook] Payment ${data.id} → status=${status} orderId=${orderId}`);
 
     if (orderId) {
-      // O Mercado Pago reenvia o mesmo webhook várias vezes. Buscamos o pedido
-      // ANTES de atualizar para saber o status anterior — assim só disparamos o
-      // e-mail de confirmação na primeira vez que o pagamento vira "approved",
-      // e não a cada reentrega.
-      const existingOrder = await getOrderFromSheet(orderId);
-      // gatewayStatus é o status cru do MP gravado na planilha (coluna Y).
-      // Se já estava "approved", o e-mail de confirmação já foi enviado antes.
-      const wasAlreadyApproved = existingOrder?.gatewayStatus === 'approved';
-
-      await updateOrderStatusInSheet(orderId, status, data.id);
-
-      // Pagamento confirmado: a reserva do cupom vira uso de verdade. O
-      // settlePixUse apaga a reserva antes de contar, então as reentregas do
-      // webhook não contam o mesmo pedido duas vezes.
-      if (status === 'approved') {
-        await settlePixUse(orderId);
-
-        // A planilha é o controle interno; o cliente logado acompanha o pedido
-        // pela conta dele. Sem esta linha ele continuaria vendo "Aguardando
-        // pagamento" depois de pagar, até alguém corrigir na mão no /admin.
-        await markOrderPaidInDb(orderId);
-      }
-
-      if (status === 'approved' && !wasAlreadyApproved && existingOrder?.customer?.email) {
-        sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
-          console.error('[webhook] Email error:', err)
-        );
-      }
-
-      // Purchase para a Meta, pela API de Conversões. Fica aqui, e não no
-      // navegador, porque este é o único ponto em que temos certeza de que o
-      // dinheiro entrou — e porque bloqueador de anúncio derruba o Pixel em
-      // boa parte dos aparelhos. O `event_id` é o número do pedido, o mesmo
-      // que o navegador usa, então a Meta descarta a cópia e a reentrega do
-      // webhook não conta a venda de novo.
-      if (status === 'approved' && !wasAlreadyApproved && existingOrder) {
-        sendPurchaseToMeta(existingOrder as Order).catch((err) =>
-          console.error('[webhook] Meta CAPI error:', err)
-        );
-      }
+      await applyPaymentStatus(orderId, status, String(data.id));
     }
 
     return res.status(200).json({ received: true, status });

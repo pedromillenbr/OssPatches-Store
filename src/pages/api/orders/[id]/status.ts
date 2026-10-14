@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
+import { applyPaymentStatus } from '@/lib/paymentSync';
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,6 +37,18 @@ export default async function handler(
     }
 
     const data = await mpRes.json();
+
+    // Rede de segurança do webhook: a tela do cliente consulta aqui enquanto
+    // espera o Pix. Se o dinheiro entrou, o pedido vira "pago" no painel e na
+    // planilha agora, sem depender do aviso do Mercado Pago chegar. Status e
+    // número do pedido vêm da API do MP, não de quem chamou.
+    if (data.status === 'approved' && typeof data.external_reference === 'string' && data.external_reference) {
+      try {
+        await applyPaymentStatus(data.external_reference, 'approved', mpPaymentId);
+      } catch (err) {
+        console.error('[order-status] sync:', err);
+      }
+    }
 
     // approved = pago, pending = aguardando, cancelled/rejected = falhou.
     // statusDetail distingue o 3DS ainda em andamento (pending_challenge) de

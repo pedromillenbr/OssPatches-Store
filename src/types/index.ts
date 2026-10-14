@@ -77,6 +77,8 @@ export interface PatchCustomization {
   quantity: number;
   artworkUrl?: string;
   artworkFileName?: string;
+  /** Caminho da arte no bucket privado `artworks` (ver lib/artwork). */
+  artworkPath?: string;
 }
 
 export type ItemCustomization = BeltCustomization | PatchCustomization;
