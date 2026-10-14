@@ -14,7 +14,8 @@ export function isArtworkPath(value: unknown): value is string {
   return typeof value === 'string' && PATH_RE.test(value);
 }
 
-/** Endereço do painel que abre a arte (pede login de admin). */
-export function artworkAdminUrl(siteUrl: string, path: string): string {
-  return `${siteUrl.replace(/\/$/, '')}/admin/arte?path=${encodeURIComponent(path)}`;
+/** Endereço do painel que baixa a arte (pede login de admin). */
+export function artworkAdminUrl(siteUrl: string, path: string, fileName = ''): string {
+  const query = new URLSearchParams({ path, ...(fileName ? { name: fileName } : {}) });
+  return `${siteUrl.replace(/\/$/, '')}/admin/arte?${query}`;
 }

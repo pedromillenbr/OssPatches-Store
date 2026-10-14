@@ -265,35 +265,32 @@ function kitLines(item: AdminOrderItem): string[] {
 }
 
 /** Artes enviadas no item (uma no patch avulso, várias no kit). */
-function itemArtworks(item: AdminOrderItem): { label: string; path: string }[] {
+function itemArtworks(item: AdminOrderItem): { label: string; path: string; name: string }[] {
   const c = item.customization;
   if (!c) return [];
   const list = Array.isArray(c.items) ? (c.items as Record<string, unknown>[]) : [c];
   return list
     .map((p, index) => ({
-      label: list.length > 1 ? `Abrir arte do patch ${index + 1}` : 'Abrir arte',
+      label: list.length > 1 ? `Baixar arte do patch ${index + 1}` : 'Baixar arte',
       path: typeof p.artworkPath === 'string' ? p.artworkPath : '',
+      name: typeof p.artworkFileName === 'string' ? p.artworkFileName : '',
     }))
     .filter((a) => a.path);
 }
 
 /**
- * Abre a arte numa aba nova. A aba é aberta antes da chamada ao servidor para
- * o navegador não tratar como pop-up; o link assinado vale 10 minutos.
+ * Baixa a arte com o nome original do arquivo. O link vem do servidor já
+ * marcado como download, então a página do painel não sai do lugar.
  */
-async function openArtwork(path: string) {
-  const tab = window.open('', '_blank');
+async function downloadArtwork(path: string, name: string) {
   try {
-    const res = await fetch(`/api/admin/artwork?path=${encodeURIComponent(path)}`, {
-      headers: await authHeader(),
-    });
+    const query = new URLSearchParams({ path, name });
+    const res = await fetch(`/api/admin/artwork?${query}`, { headers: await authHeader() });
     const body = await res.json();
     if (!res.ok || !body.url) throw new Error(body.error || 'Arte não encontrada.');
-    if (tab) tab.location.href = body.url;
-    else window.location.href = body.url;
+    window.location.href = body.url;
   } catch (err) {
-    tab?.close();
-    toast.error(err instanceof Error ? err.message : 'Não foi possível abrir a arte.');
+    toast.error(err instanceof Error ? err.message : 'Não foi possível baixar a arte.');
   }
 }
 
@@ -513,7 +510,7 @@ function AdminOrderRow({
                       <button
                         key={art.path}
                         type="button"
-                        onClick={() => openArtwork(art.path)}
+                        onClick={() => downloadArtwork(art.path, art.name)}
                         className="mt-1 mr-3 text-xs font-semibold text-brand-black underline underline-offset-2"
                       >
                         {art.label}

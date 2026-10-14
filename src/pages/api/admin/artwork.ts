@@ -4,7 +4,10 @@ import { isAdminRequest } from '@/lib/requireAdminApi';
 import { handleCors } from '@/lib/cors';
 import { ARTWORK_BUCKET, isArtworkPath } from '@/lib/artwork';
 
-/** Link temporário (10 min) para o admin abrir a arte de um pedido. */
+/**
+ * Link temporário (10 min) para o admin baixar a arte de um pedido. O
+ * arquivo vem como download, com o nome original que o cliente enviou.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (handleCors(req, res)) return;
 
@@ -26,7 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Banco de Dados não configurado no servidor.' });
   }
 
-  const { data, error } = await admin.storage.from(ARTWORK_BUCKET).createSignedUrl(path, 600);
+  // Nome do arquivo no download: o original do cliente, só com caracteres
+  // seguros e a extensão real do arquivo guardado.
+  const ext = path.slice(path.lastIndexOf('.'));
+  const rawName = typeof req.query.name === 'string' ? req.query.name : '';
+  const base = rawName.replace(/\.[^.]*$/, '').replace(/[^\w.\- ]+/g, '').trim().slice(0, 80);
+  const downloadName = `${base || 'arte'}${ext}`;
+
+  const { data, error } = await admin.storage
+    .from(ARTWORK_BUCKET)
+    .createSignedUrl(path, 600, { download: downloadName });
   if (error || !data) {
     console.error('[artwork] signed url:', error?.message);
     return res.status(404).json({ error: 'Arte não encontrada.' });

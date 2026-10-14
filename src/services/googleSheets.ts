@@ -137,10 +137,10 @@ function patchDimensions(customization: Record<string, unknown>): string {
   return text(customization.dimensions);
 }
 
-/** "arte.png — https://osspatches.com/admin/arte?path=..." (link pede login de admin). */
+/** "arte.png — https://osspatches.com/admin/arte?path=..." (link baixa a arte e pede login de admin). */
 function artworkCell(p: Record<string, unknown>): string {
   const name = text(p.artworkFileName);
-  const link = isArtworkPath(p.artworkPath) ? artworkAdminUrl(CONFIG.siteUrl, p.artworkPath) : '';
+  const link = isArtworkPath(p.artworkPath) ? artworkAdminUrl(CONFIG.siteUrl, p.artworkPath, name) : '';
   return [name, link].filter(Boolean).join(' — ');
 }
 
