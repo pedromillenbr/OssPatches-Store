@@ -1,6 +1,6 @@
 // ─── Product Types ────────────────────────────────────────────────────────────
 
-export type BeltSize = 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6' | 'A7';
+export type BeltSize = 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
 export type KidsBeltSize = 'M0' | 'M1' | 'M2' | 'M3' | 'M4' | 'M5';
 export type PatchSize = 'P' | 'M' | 'G';
 export type PatchFormat = 'redondo' | 'retangular';

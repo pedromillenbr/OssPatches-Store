@@ -16,7 +16,7 @@ import type { CartItem } from '@/types';
 /** Tamanhos do menor para o maior — é esta ordem que define o peso. */
 export const BELT_SIZE_ORDER = [
   'M0', 'M1', 'M2', 'M3', 'M4', 'M5',
-  'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7',
+  'A0', 'A1', 'A2', 'A3', 'A4', 'A5',
 ] as const;
 
 /** Medidos na loja: M1 = 200 g, A5 = 370 g. */
@@ -39,7 +39,7 @@ export function beltWeightKg(size: unknown): number {
   const index = BELT_SIZE_ORDER.indexOf(
     String(size ?? '').trim().toUpperCase() as (typeof BELT_SIZE_ORDER)[number]
   );
-  if (index === -1) return beltWeightKg('A7');
+  if (index === -1) return beltWeightKg('A5');
 
   const base = BELT_SIZE_ORDER.indexOf(REFERENCE.size);
   const kg = REFERENCE.kg + (index - base) * STEP_KG;

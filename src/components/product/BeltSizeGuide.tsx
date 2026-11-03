@@ -7,24 +7,22 @@ interface BeltSizeGuide {
 }
 
 const BELT_SIZES_CHILDREN: BeltSizeGuide[] = [
-  { size: 'M1', length: '1.40m', width: '4cm' },
-  { size: 'M2', length: '1.50m', width: '4cm' },
-  { size: 'M3', length: '1.60m', width: '4cm' },
-  { size: 'M4', length: '1.70m', width: '4cm' },
-  { size: 'A0', length: '1.80m', width: '4.5cm' },
-  { size: 'A1', length: '1.90m', width: '4.5cm' },
-  { size: 'A2', length: '2.00m', width: '4.5cm' },
+  { size: 'M1', length: '1.80m', width: '4cm' },
+  { size: 'M2', length: '2.00m', width: '4cm' },
+  { size: 'M3', length: '2.20m', width: '4cm' },
+  { size: 'M4', length: '2.40m', width: '4cm' },
+  { size: 'A0', length: '2.50m', width: '4.5cm' },
+  { size: 'A1', length: '2.65m', width: '4.5cm' },
+  { size: 'A2', length: '2.80m', width: '4.5cm' },
 ];
 
 const BELT_SIZES_ADULTS: BeltSizeGuide[] = [
-  { size: 'A0', length: '2.00m', width: '4.5cm' },
-  { size: 'A1', length: '2.10m', width: '4.5cm' },
-  { size: 'A2', length: '2.20m', width: '4.5cm' },
-  { size: 'A3', length: '2.30m', width: '4.5cm' },
-  { size: 'A4', length: '2.40m', width: '4.5cm' },
-  { size: 'A5', length: '2.50m', width: '4.5cm' },
-  { size: 'A6', length: '2.60m', width: '4.5cm' },
-  { size: 'A7', length: '2.70m', width: '4.5cm' },
+  { size: 'A0', length: '2.50m', width: '4.5cm' },
+  { size: 'A1', length: '2.65m', width: '4.5cm' },
+  { size: 'A2', length: '2.80m', width: '4.5cm' },
+  { size: 'A3', length: '3.00m', width: '4.5cm' },
+  { size: 'A4', length: '3.20m', width: '4.5cm' },
+  { size: 'A5', length: '3.40m', width: '4.5cm' },
 ];
 
 interface BeltSizeGuideComponentProps {

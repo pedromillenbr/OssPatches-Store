@@ -272,7 +272,7 @@ const BELT_COLUMNS: SheetColumn[] = [
   {
     key: 'size',
     header: 'Tamanho',
-    options: ['M1', 'M2', 'M3', 'M4', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'],
+    options: ['M1', 'M2', 'M3', 'M4', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5'],
     value: ({ customization }) => text(customization.size),
   },
   {
