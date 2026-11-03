@@ -160,7 +160,7 @@ export default function BeltCustomizer({ product }: BeltCustomizerProps) {
           ))}
         </div>
         <p className="text-xs text-brand-gray-400 mt-2">
-          {isKidsBelt ? 'M0 → M7' : 'A0 a A5 — escolha pelo seu peso e altura'}
+          {isKidsBelt ? 'M1 a A2 — escolha pelo seu peso e altura' : 'A0 a A5 — escolha pelo seu peso e altura'}
         </p>
       </div>
 
