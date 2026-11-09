@@ -49,6 +49,33 @@ const SELECT_COLUMNS =
   'address, customer_name, customer_email, customer_phone, payment_method, shipping_method, ' +
   'tracking_code, tracking_url, seen_at, created_at';
 
+/** Janelas de tempo do painel. `null` = todos os pedidos. */
+const PERIODS = [7, 30, 90] as const;
+type Period = (typeof PERIODS)[number] | null;
+
+/** Pedido que ainda não pagou não é dinheiro no caixa. */
+const isPaid = (order: AdminOrder) => order.status !== 'pending';
+
+function withinDays(order: AdminOrder, days: number | null): boolean {
+  if (days === null) return true;
+  return Date.now() - new Date(order.created_at).getTime() <= days * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Soma o que foi pago, separado por moeda: venda em dólar do PayPal não pode
+ * entrar somada como se fosse real.
+ */
+function paidTotals(orders: AdminOrder[]): { currency: string; total: number }[] {
+  const byCurrency = new Map<string, number>([['BRL', 0]]);
+  orders.filter(isPaid).forEach((o) => {
+    const currency = o.currency || 'BRL';
+    byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + Number(o.total || 0));
+  });
+  return Array.from(byCurrency, ([currency, total]) => ({ currency, total })).filter(
+    (t) => t.currency === 'BRL' || t.total > 0
+  );
+}
+
 const PAYMENT_LABEL: Record<string, string> = {
   pix: 'Pix',
   card: 'Cartão',
@@ -63,6 +90,8 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'import' | 'payments' | null>(null);
   const [migrationPending, setMigrationPending] = useState(false);
+  const [period, setPeriod] = useState<Period>(30);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const loadOrders = async () => {
     // O CPF vem numa coluna mais nova (supabase/orders_cpf.sql). Se ela ainda
@@ -100,6 +129,12 @@ export default function AdminOrdersPage() {
   }, [ready]);
 
   const novos = useMemo(() => orders.filter((o) => !o.seen_at).length, [orders]);
+
+  const inPeriod = useMemo(() => orders.filter((o) => withinDays(o, period)), [orders, period]);
+  const visible = useMemo(
+    () => (statusFilter ? inPeriod.filter((o) => o.status === statusFilter) : inPeriod),
+    [inPeriod, statusFilter]
+  );
 
   /** Chama uma rota do painel e recarrega a lista quando ela mudou algo. */
   const runAction = async (
@@ -197,6 +232,75 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
+        {!loading && orders.length > 0 && (
+          <>
+            {/* Um cartão por período: o total pago e quantos pedidos. Clicar filtra a lista. */}
+            <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[...PERIODS, null].map((days) => {
+                const list = orders.filter((o) => withinDays(o, days));
+                const [main, ...others] = paidTotals(list);
+                const paidCount = list.filter(isPaid).length;
+                const active = period === days;
+                return (
+                  <button
+                    key={days ?? 'all'}
+                    type="button"
+                    onClick={() => setPeriod(days)}
+                    aria-pressed={active}
+                    className={clsx(
+                      'rounded-lg border px-4 py-3 text-left transition-colors',
+                      active
+                        ? 'border-brand-black bg-brand-black text-white'
+                        : 'border-brand-gray-200 bg-white hover:border-brand-gray-400'
+                    )}
+                  >
+                    <p
+                      className={clsx(
+                        'text-[11px] font-bold uppercase tracking-wider',
+                        active ? 'text-brand-gray-300' : 'text-brand-gray-400'
+                      )}
+                    >
+                      {days ? `Últimos ${days} dias` : 'Desde o início'}
+                    </p>
+                    <p className="mt-1 text-xl font-black">{formatPrice(main.total, main.currency)}</p>
+                    {others.map((o) => (
+                      <p key={o.currency} className="text-sm font-semibold">
+                        + {formatPrice(o.total, o.currency)}
+                      </p>
+                    ))}
+                    <p className={clsx('mt-1 text-xs', active ? 'text-brand-gray-300' : 'text-brand-gray-500')}>
+                      {paidCount} pago{paidCount === 1 ? '' : 's'} · {list.length} no total
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Separação por status, com a contagem do período escolhido. */}
+            <div className="mb-6 flex flex-wrap gap-2">
+              {[null, ...ALL_STATUSES].map((s) => {
+                const count = s ? inPeriod.filter((o) => o.status === s).length : inPeriod.length;
+                return (
+                  <button
+                    key={s ?? 'all'}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    aria-pressed={statusFilter === s}
+                    className={clsx(
+                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                      statusFilter === s
+                        ? 'border-brand-black bg-brand-black text-white'
+                        : 'border-brand-gray-200 bg-white text-brand-gray-700 hover:border-brand-gray-400'
+                    )}
+                  >
+                    {s ? orderStatusLabel(s) : 'Todos'} <span className="opacity-60">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         {loading ? (
           <div className="space-y-4">
             {[0, 1, 2].map((i) => (
@@ -207,9 +311,11 @@ export default function AdminOrdersPage() {
           <p className="text-brand-gray-500">
             Nenhum pedido na lista. Se você já vendeu, use “Importar pedidos” acima.
           </p>
+        ) : visible.length === 0 ? (
+          <p className="text-brand-gray-500">Nenhum pedido com esse filtro.</p>
         ) : (
           <ul className="space-y-3">
-            {orders.map((order) => (
+            {visible.map((order) => (
               <AdminOrderRow
                 key={order.id}
                 order={order}
@@ -331,6 +437,7 @@ function AdminOrderRow({
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url ?? '');
   const [saving, setSaving] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const novo = !order.seen_at;
   const addr = order.address;
@@ -386,6 +493,30 @@ function AdminOrderRow({
       toast.error('Não foi possível salvar.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const ok = window.confirm(
+      `Excluir o pedido ${order.order_ref} de ${order.customer_name || 'cliente sem nome'}?\n\n` +
+        'Ele some do painel e da conta do cliente. Na planilha a linha fica, marcada como "Excluído".'
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/order-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+        body: JSON.stringify({ orderRef: order.order_ref }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Pedido ${order.order_ref} excluído`);
+      await onSaved();
+    } catch {
+      toast.error('Não foi possível excluir.');
+      setDeleting(false);
     }
   };
 
@@ -574,9 +705,19 @@ function AdminOrderRow({
                 </>
               )}
             </p>
-            <Button size="sm" onClick={handleSave} loading={saving}>
-              Salvar alterações
-            </Button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting || saving}
+                className="text-xs font-semibold text-red-600 underline underline-offset-2 hover:text-red-800 disabled:opacity-50"
+              >
+                {deleting ? 'Excluindo…' : 'Excluir pedido'}
+              </button>
+              <Button size="sm" onClick={handleSave} loading={saving} disabled={deleting}>
+                Salvar alterações
+              </Button>
+            </div>
           </div>
         </div>
       )}

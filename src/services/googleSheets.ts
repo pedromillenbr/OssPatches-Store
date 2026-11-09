@@ -68,7 +68,14 @@ const STATUS_RAW: Record<string, string> = {
 const STATUS_OPTIONS = ['Pendente', 'Pago', 'Em produção', 'Enviado', 'Entregue', 'Recusado', 'Estornado'];
 
 /** Coluna preenchida à mão pelo dono da loja, fora do fluxo do pagamento. */
-const SHIPPING_OPTIONS = ['A produzir', 'Em produção', 'Postado', 'A caminho', 'Entregue'];
+const SHIPPING_OPTIONS = ['A produzir', 'Em produção', 'Postado', 'A caminho', 'Entregue', 'Excluído'];
+
+/**
+ * Etapa de pedido excluído no painel. A linha fica na planilha (é o registro
+ * da venda), mas a leitura pula o pedido — senão "Importar pedidos" o traria
+ * de volta. Para desfazer, basta trocar a etapa e importar de novo.
+ */
+export const DELETED_STAGE = 'Excluído';
 
 export function statusLabel(raw: string): string {
   return STATUS_LABELS[raw] || raw;
@@ -828,7 +835,7 @@ async function readOrdersFromSheet(wanted?: string): Promise<SheetOrderSummary[]
       }
     }
 
-    return Array.from(byId.values());
+    return Array.from(byId.values()).filter((o) => o.shippingStage.trim() !== DELETED_STAGE);
   } catch (error) {
     console.error('[sheets] Falha ao buscar pedidos por e-mail:', error);
     return [];
@@ -859,11 +866,31 @@ export async function updateOrderShippingInSheet(
   status: string,
   tracking: string
 ): Promise<number> {
+  return writeOrderCells(orderId, {
+    shipping: STATUS_TO_STAGE[status] ?? '',
+    tracking,
+  });
+}
+
+/** Marca o pedido como excluído em todas as linhas dele. Ver DELETED_STAGE. */
+export async function markOrderDeletedInSheet(orderId: string): Promise<number> {
+  return writeOrderCells(orderId, { shipping: DELETED_STAGE });
+}
+
+/**
+ * Escreve as colunas pedidas em todas as linhas do pedido. Devolve quantas
+ * linhas mudaram — 0 quando a planilha falhou ou o pedido não está nela.
+ */
+async function writeOrderCells(
+  orderId: string,
+  cells: Partial<Record<'shipping' | 'tracking', string>>
+): Promise<number> {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   if (!spreadsheetId) return 0;
 
-  const stage = sanitizeSheetValue(STATUS_TO_STAGE[status] ?? '');
-  const trackingValue = sanitizeSheetValue(tracking);
+  const entries = Object.entries(cells).map(
+    ([key, value]) => [key, sanitizeSheetValue(value ?? '')] as const
+  );
   let updated = 0;
 
   try {
@@ -882,9 +909,6 @@ export async function updateOrderShippingInSheet(
         continue;
       }
 
-      const shippingColumn = columnLetter(indexOf(tab, 'shipping'));
-      const trackingColumn = columnLetter(indexOf(tab, 'tracking'));
-
       for (let index = 0; index < rows.length; index += 1) {
         if (rows[index][0] !== orderId) continue;
         const line = index + 1;
@@ -893,10 +917,10 @@ export async function updateOrderShippingInSheet(
           spreadsheetId,
           requestBody: {
             valueInputOption: 'RAW',
-            data: [
-              { range: `${tab.name}!${shippingColumn}${line}`, values: [[stage]] },
-              { range: `${tab.name}!${trackingColumn}${line}`, values: [[trackingValue]] },
-            ],
+            data: entries.map(([key, value]) => ({
+              range: `${tab.name}!${columnLetter(indexOf(tab, key))}${line}`,
+              values: [[value]],
+            })),
           },
         });
         updated += 1;
