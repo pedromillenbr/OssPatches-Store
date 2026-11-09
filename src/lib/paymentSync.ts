@@ -3,6 +3,7 @@ import { updateOrderStatusInSheet, getOrderFromSheet } from '@/services/googleSh
 import { sendPaymentConfirmedEmail } from '@/services/email';
 import { settlePixUse } from '@/lib/couponUsage';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendPurchaseToMeta } from '@/lib/metaCapi';
 import { CONFIG } from '@/config';
 import type { Order } from '@/types';
@@ -46,7 +47,9 @@ export async function applyPaymentStatus(
   await markOrderPaidInDb(orderId);
 
   if (existingOrder?.customer?.email) {
-    await sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
+    await sendPaymentConfirmedEmail(
+      { ...existingOrder, items: (await itemsFromDb(orderId)) ?? existingOrder.items } as Order
+    ).catch((err) =>
       console.error('[paymentSync] Email error:', err)
     );
   }
@@ -58,6 +61,18 @@ export async function applyPaymentStatus(
       console.error('[paymentSync] Meta CAPI error:', err)
     );
   }
+}
+
+/**
+ * Itens completos do pedido (personalização e preço), para o e-mail. A
+ * planilha só guarda o nome do primeiro produto; o banco guarda o carrinho
+ * inteiro. Pedido de convidado antigo pode não estar no banco — aí null.
+ */
+export async function itemsFromDb(orderRef: string): Promise<Order['items'] | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+  const { data } = await admin.from('orders').select('items').eq('order_ref', orderRef).maybeSingle();
+  return Array.isArray(data?.items) && data.items.length ? (data.items as Order['items']) : null;
 }
 
 /**

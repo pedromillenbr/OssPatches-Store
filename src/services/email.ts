@@ -72,7 +72,10 @@ function kitDetail(c: Record<string, unknown>): string {
 function itemsTable(order: Order): string {
   return order.items
     .map((item) => {
-      const c = item.customization as unknown as Record<string, unknown>;
+      // Pedido lido da planilha chega sem personalização nem preço. Sem estas
+      // guardas o e-mail de "Pagamento confirmado" quebrava antes de sair.
+      const c = (item.customization ?? {}) as unknown as Record<string, unknown>;
+      const price = Number(item.price);
       const detail = [
         c.size ? `Tam: ${esc(c.size)}` : '',
         'degree' in c ? `Grau: ${esc(c.degree)}` : '',
@@ -95,7 +98,7 @@ function itemsTable(order: Order): string {
             ${esc(item.name)}${detail ? `<br><span style="color:#888;font-size:12px">${detail}</span>` : ''}
           </td>
           <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right">
-            ${formatPrice(item.price, order.currency)}
+            ${Number.isFinite(price) && price > 0 ? formatPrice(price, order.currency) : ''}
           </td>
         </tr>`;
     })

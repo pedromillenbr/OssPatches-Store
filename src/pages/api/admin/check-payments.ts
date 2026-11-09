@@ -6,6 +6,7 @@ import {
 } from '@/services/googleSheets';
 import { sendPaymentConfirmedEmail } from '@/services/email';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
+import { itemsFromDb } from '@/lib/paymentSync';
 import { settlePixUse } from '@/lib/couponUsage';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminRequest } from '@/lib/requireAdminApi';
@@ -109,7 +110,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // confirmação nunca saiu — este é o momento de mandar.
       const existing = await getOrderFromSheet(orderRef);
       if (existing?.customer?.email) {
-        await sendPaymentConfirmedEmail(existing as Order).catch((err) =>
+        await sendPaymentConfirmedEmail(
+          { ...existing, items: (await itemsFromDb(orderRef)) ?? existing.items } as Order
+        ).catch((err) =>
           console.error('[check-payments] e-mail:', err)
         );
       }
