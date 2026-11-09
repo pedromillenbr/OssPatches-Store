@@ -35,16 +35,22 @@ export async function applyPaymentStatus(
   // precisa reescrever a planilha toda vez.
   if (wasAlreadyApproved && status === 'approved') return;
 
-  await updateOrderStatusInSheet(orderId, status, paymentId);
+  if (status !== 'approved') {
+    await updateOrderStatusInSheet(orderId, status, paymentId);
+    return;
+  }
 
-  if (status !== 'approved') return;
+  // Banco ANTES da planilha. A tela do cliente (sync-status) só age quando vê
+  // "pago" na planilha; nesta ordem, ela nunca chega antes e a conta nova
+  // nasce aqui — com o link indo dentro da confirmação, sem e-mail extra.
+  // Sem esta linha o cliente logado continuaria vendo "Aguardando pagamento".
+  const account = await markOrderPaidInDb(orderId);
+
+  await updateOrderStatusInSheet(orderId, status, paymentId);
 
   // A reserva do cupom vira uso de verdade. O settlePixUse apaga a reserva
   // antes de contar, então repetições não contam o mesmo pedido duas vezes.
   await settlePixUse(orderId);
-
-  // Sem esta linha o cliente logado continuaria vendo "Aguardando pagamento".
-  const account = await markOrderPaidInDb(orderId);
 
   if (existingOrder?.customer?.email) {
     await sendPaymentConfirmedEmail(

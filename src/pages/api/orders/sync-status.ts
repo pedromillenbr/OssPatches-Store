@@ -46,9 +46,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const order = await getOrderFromSheet(orderRef);
     if (order && PAID_STATUSES.has(order.gatewayStatus ?? '')) {
-      // A tela do cliente às vezes percebe o pagamento antes do webhook. Se a
-      // conta nasceu aqui, quem confirma depois não tem mais o link — então o
-      // aviso da conta sai por conta própria.
+      // Normalmente o pedido já está "pago" no banco quando a planilha diz
+      // pago, e nada nasce aqui. Só se o banco falhou na confirmação a conta
+      // nasce agora — e aí o aviso dela precisa sair por conta própria.
       const account = await markOrderPaidInDb(orderRef);
       if (account) await sendAccountCreatedEmail(account);
     }

@@ -101,9 +101,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const paymentId = await findApprovedPayment(orderRef);
       if (!paymentId) continue;
 
+      // Banco antes da planilha, pelo mesmo motivo do applyPaymentStatus.
+      const account = await markOrderPaidInDb(orderRef);
       await updateOrderStatusInSheet(orderRef, 'approved', paymentId);
       await settlePixUse(orderRef);
-      const account = await markOrderPaidInDb(orderRef);
       confirmed += 1;
 
       // A planilha ainda não registrava o pagamento, então o e-mail de
