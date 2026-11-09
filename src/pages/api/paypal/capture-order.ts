@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    sendOrderConfirmationEmail(order).catch((err) =>
+    await sendOrderConfirmationEmail(order).catch((err) =>
       console.error('Email confirmation error:', err)
     );
 

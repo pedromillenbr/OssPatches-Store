@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // confirmação nunca saiu — este é o momento de mandar.
       const existing = await getOrderFromSheet(orderRef);
       if (existing?.customer?.email) {
-        sendPaymentConfirmedEmail(existing as Order).catch((err) =>
+        await sendPaymentConfirmedEmail(existing as Order).catch((err) =>
           console.error('[check-payments] e-mail:', err)
         );
       }

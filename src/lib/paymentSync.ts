@@ -46,7 +46,7 @@ export async function applyPaymentStatus(
   await markOrderPaidInDb(orderId);
 
   if (existingOrder?.customer?.email) {
-    sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
+    await sendPaymentConfirmedEmail(existingOrder as Order).catch((err) =>
       console.error('[paymentSync] Email error:', err)
     );
   }

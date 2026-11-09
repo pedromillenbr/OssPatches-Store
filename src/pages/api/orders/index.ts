@@ -187,8 +187,10 @@ export default async function handler(
   // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
   await markCartRecovered(order.customer.email);
 
-  // Send confirmation email (non-fatal)
-  sendOrderConfirmationEmail(order).catch((err) =>
+  // Espera o envio terminar: na Vercel a função congela assim que a resposta
+  // sai, e um envio solto no ar pode nunca chegar à Resend. O .catch mantém a
+  // falha do e-mail sem derrubar o pedido.
+  await sendOrderConfirmationEmail(order).catch((err) =>
     console.error('Email confirmation error:', err)
   );
 

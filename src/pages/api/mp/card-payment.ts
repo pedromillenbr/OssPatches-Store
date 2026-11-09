@@ -200,7 +200,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (mpStatus === 'approved') await markOrderPaidInDb(orderId);
   // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
   await markCartRecovered(order.customer.email);
-  sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));
+  await sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));
 
   return res.status(201).json({
     orderId,

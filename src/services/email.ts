@@ -12,6 +12,20 @@ const FROM = process.env.RESEND_FROM_EMAIL || 'OssPatches <onboarding@resend.dev
 // é desviada para o e-mail que a loja lê de verdade.
 const REPLY_TO = process.env.RESEND_REPLY_TO || 'osspatches@gmail.com';
 
+/**
+ * Envia e registra a falha. A Resend devolve o erro em vez de lançar — sem
+ * olhar o `error`, um e-mail recusado (remetente não verificado, endereço
+ * inválido) sumia em silêncio e o cliente ficava sem confirmação.
+ */
+async function deliver(label: string, payload: Parameters<typeof resend.emails.send>[0]) {
+  const { data, error } = await resend.emails.send(payload);
+  if (error) {
+    console.error(`[email] ${label} falhou:`, error.message);
+    return;
+  }
+  console.log(`[email] ${label} enviado (${data?.id})`);
+}
+
 function formatPrice(value: number, currency = 'BRL'): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value);
 }
@@ -181,7 +195,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
 
     ${trackingCta()}`;
 
-  await resend.emails.send({
+  await deliver(`pedido ${order.id}`, {
     from: FROM,
     replyTo: REPLY_TO,
     to: order.customer.email,
@@ -227,7 +241,7 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
 
     ${trackingCta()}`;
 
-  await resend.emails.send({
+  await deliver(`pagamento ${order.id}`, {
     from: FROM,
     replyTo: REPLY_TO,
     to: order.customer.email,
@@ -350,7 +364,7 @@ export async function sendAbandonedCartEmail(input: {
       <a href="${outUrl}" style="color:#888">Cancelar</a>.
     </p>`;
 
-  await resend.emails.send({
+  await deliver('carrinho abandonado', {
     from: FROM,
     replyTo: REPLY_TO,
     to: input.email,
