@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getOrderFromSheet } from '@/services/googleSheets';
+import { sendAccountCreatedEmail } from '@/services/email';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
 import { ORDER_ID_REGEX } from '@/lib/checkoutGuards';
 import { rejectIfRateLimited } from '@/lib/rateLimit';
@@ -45,7 +46,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const order = await getOrderFromSheet(orderRef);
     if (order && PAID_STATUSES.has(order.gatewayStatus ?? '')) {
-      await markOrderPaidInDb(orderRef);
+      // A tela do cliente às vezes percebe o pagamento antes do webhook. Se a
+      // conta nasceu aqui, quem confirma depois não tem mais o link — então o
+      // aviso da conta sai por conta própria.
+      const account = await markOrderPaidInDb(orderRef);
+      if (account) await sendAccountCreatedEmail(account);
     }
   } catch (err) {
     // Falhar aqui não pode quebrar a tela de sucesso do cliente: o webhook

@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { ensureAccountForOrder } from '@/lib/autoAccount';
+import { ensureAccountForOrder, type NewAccount } from '@/lib/autoAccount';
 
 /**
  * Marca o pedido do cliente como "Pagamento confirmado" no Banco de Dados.
@@ -16,9 +16,9 @@ import { ensureAccountForOrder } from '@/lib/autoAccount';
  * Nunca lança: uma falha aqui não pode derrubar o webhook (o Mercado Pago
  * reenviaria o evento em loop) nem a tela de sucesso do cliente.
  */
-export async function markOrderPaidInDb(orderRef: string): Promise<void> {
+export async function markOrderPaidInDb(orderRef: string): Promise<NewAccount | null> {
   const admin = getSupabaseAdmin();
-  if (!admin) return;
+  if (!admin) return null;
 
   try {
     const { data, error } = await admin
@@ -30,7 +30,7 @@ export async function markOrderPaidInDb(orderRef: string): Promise<void> {
 
     if (error) {
       console.error(`[orderPaymentSync] ${orderRef}:`, error.message);
-      return;
+      return null;
     }
 
     // 0 linhas é normal e esperado: pedido de convidado (não existe no banco)
@@ -38,10 +38,13 @@ export async function markOrderPaidInDb(orderRef: string): Promise<void> {
     if (data?.length) {
       console.log(`[orderPaymentSync] ${orderRef} → confirmed`);
       // Só na virada para "pago", que acontece uma vez por pedido: quem
-      // comprou sem cadastro ganha a conta agora.
-      await ensureAccountForOrder(orderRef);
+      // comprou sem cadastro ganha a conta agora. Quem chamou coloca o link
+      // da senha no e-mail de confirmação.
+      return await ensureAccountForOrder(orderRef);
     }
+    return null;
   } catch (err) {
     console.error(`[orderPaymentSync] ${orderRef} (inesperado):`, err);
+    return null;
   }
 }

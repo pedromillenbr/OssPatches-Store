@@ -4,7 +4,7 @@ import {
   getOrderFromSheet,
   updateOrderStatusInSheet,
 } from '@/services/googleSheets';
-import { sendPaymentConfirmedEmail } from '@/services/email';
+import { sendAccountCreatedEmail, sendPaymentConfirmedEmail } from '@/services/email';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
 import { itemsFromDb } from '@/lib/paymentSync';
 import { settlePixUse } from '@/lib/couponUsage';
@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       await updateOrderStatusInSheet(orderRef, 'approved', paymentId);
       await settlePixUse(orderRef);
-      await markOrderPaidInDb(orderRef);
+      const account = await markOrderPaidInDb(orderRef);
       confirmed += 1;
 
       // A planilha ainda não registrava o pagamento, então o e-mail de
@@ -111,10 +111,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const existing = await getOrderFromSheet(orderRef);
       if (existing?.customer?.email) {
         await sendPaymentConfirmedEmail(
-          { ...existing, items: (await itemsFromDb(orderRef)) ?? existing.items } as Order
+          { ...existing, items: (await itemsFromDb(orderRef)) ?? existing.items } as Order,
+          account
         ).catch((err) =>
           console.error('[check-payments] e-mail:', err)
         );
+      } else if (account) {
+        await sendAccountCreatedEmail(account);
       }
     } catch (err) {
       console.error(`[check-payments] ${orderRef}:`, err);

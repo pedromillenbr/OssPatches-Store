@@ -197,10 +197,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // mais do navegador chegar (e ficar) na tela de sucesso.
   const sessionUser = await getSessionUser(req);
   await mirrorOrderToDb(order, sessionUser?.id ?? null);
-  if (mpStatus === 'approved') await markOrderPaidInDb(orderId);
+  const account = mpStatus === 'approved' ? await markOrderPaidInDb(orderId) : null;
   // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
   await markCartRecovered(order.customer.email);
-  await sendOrderConfirmationEmail(order).catch((err) => console.error('Email error:', err));
+  // Cartão aprovado na hora: o link da conta nova vai junto, num e-mail só.
+  await sendOrderConfirmationEmail(order, account).catch((err) => console.error('Email error:', err));
 
   return res.status(201).json({
     orderId,

@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { Order, CartItem } from '@/types';
 import { CONFIG } from '@/config';
+import type { NewAccount } from '@/lib/autoAccount';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 // Remetente da loja. Enquanto o domínio não estiver verificado na Resend, o
@@ -43,6 +44,30 @@ function trackingCta(): string {
       </a>
       <p style="margin:10px 0 0;font-size:13px;color:#888">
         Use o número do pedido acima e este e-mail.
+      </p>
+    </div>`;
+}
+
+/**
+ * Bloco da conta criada sozinha no pagamento. Entra no lugar do botão de
+ * rastrear: com a conta, o cliente acompanha o pedido em "Meus pedidos". Vai
+ * dentro da confirmação para não chegarem dois e-mails no mesmo minuto.
+ */
+function accountCta(account: NewAccount): string {
+  return `
+    <div style="margin-top:28px;padding:24px 20px;background:#f9f9f9;border:1px solid #eee;text-align:center">
+      <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#000">Sua conta está pronta</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#555;line-height:1.6">
+        Criamos uma conta com este e-mail para você acompanhar o pedido e não digitar
+        seus dados de novo na próxima compra. Falta só escolher uma senha.
+      </p>
+      <a href="${esc(account.passwordUrl)}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px">
+        Criar minha senha
+      </a>
+      <p style="margin:12px 0 0;font-size:12px;color:#888;line-height:1.6">
+        O botão funciona uma vez e por tempo limitado. Se expirar, peça outro em
+        <a href="${CONFIG.siteUrl}/senha-perdida" style="color:#000">${CONFIG.siteUrl.replace(/^https?:\/\//, '')}/senha-perdida</a>.
+        Não quer ter conta? Responda este e-mail que a gente apaga.
       </p>
     </div>`;
 }
@@ -136,7 +161,10 @@ function baseLayout(content: string): string {
 </html>`;
 }
 
-export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
+export async function sendOrderConfirmationEmail(
+  order: Order,
+  account?: NewAccount | null
+): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
 
   const isBrazil = order.currency === 'BRL';
@@ -196,7 +224,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
       </p>
     </div>
 
-    ${trackingCta()}`;
+    ${account ? accountCta(account) : trackingCta()}`;
 
   await deliver(`pedido ${order.id}`, {
     from: FROM,
@@ -207,7 +235,10 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
   });
 }
 
-export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
+export async function sendPaymentConfirmedEmail(
+  order: Order,
+  account?: NewAccount | null
+): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
 
   const content = `
@@ -242,7 +273,7 @@ export async function sendPaymentConfirmedEmail(order: Order): Promise<void> {
       </p>
     </div>
 
-    ${trackingCta()}`;
+    ${account ? accountCta(account) : trackingCta()}`;
 
   await deliver(`pagamento ${order.id}`, {
     from: FROM,

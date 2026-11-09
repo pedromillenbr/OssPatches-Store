@@ -1,5 +1,4 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { sendAccountCreatedEmail } from '@/services/email';
 import { CONFIG } from '@/config';
 
 /**
@@ -8,7 +7,8 @@ import { CONFIG } from '@/config';
  * A loja aceita compra sem conta para não perder venda — mas sem conta o
  * cliente não tem "Meus pedidos" e os dados dele (CPF, endereço) não ficam
  * guardados para a próxima compra. Aqui a conta nasce sozinha, com o que ele
- * já digitou no checkout, e ele recebe um e-mail para escolher a senha.
+ * já digitou no checkout. O link para escolher a senha vai DENTRO do e-mail
+ * de confirmação do pedido — um e-mail a menos chegando no mesmo minuto.
  *
  * Só depois do pagamento confirmado: se fosse na criação do pedido, qualquer
  * um geraria contas e e-mails em massa só montando carrinhos.
@@ -19,9 +19,16 @@ import { CONFIG } from '@/config';
  *
  * Nunca lança: o cliente já pagou, e nada aqui pode atrapalhar a confirmação.
  */
-export async function ensureAccountForOrder(orderRef: string): Promise<void> {
+export interface NewAccount {
+  email: string;
+  firstName: string;
+  passwordUrl: string;
+}
+
+/** Devolve a conta recém-criada, ou null quando nenhuma conta nasceu agora. */
+export async function ensureAccountForOrder(orderRef: string): Promise<NewAccount | null> {
   const admin = getSupabaseAdmin();
-  if (!admin) return;
+  if (!admin) return null;
 
   try {
     const { data: order, error: readError } = await admin
@@ -32,11 +39,11 @@ export async function ensureAccountForOrder(orderRef: string): Promise<void> {
 
     if (readError) {
       console.error(`[autoAccount] ${orderRef}:`, readError.message);
-      return;
+      return null;
     }
 
     const email = String(order?.customer_email || '').trim().toLowerCase();
-    if (!order || order.user_id || !email) return;
+    if (!order || order.user_id || !email) return null;
 
     const name = String(order.customer_name || '').trim();
 
@@ -53,7 +60,7 @@ export async function ensureAccountForOrder(orderRef: string): Promise<void> {
         createError?.code === 'email_exists' ||
         /already (been )?registered/i.test(createError?.message || '');
       if (!known) console.error(`[autoAccount] ${orderRef}:`, createError?.message);
-      return;
+      return null;
     }
 
     const userId = created.user.id;
@@ -105,9 +112,10 @@ export async function ensureAccountForOrder(orderRef: string): Promise<void> {
       ? `${CONFIG.siteUrl}/redefinir-senha#token_hash=${encodeURIComponent(token)}`
       : `${CONFIG.siteUrl}/senha-perdida`;
 
-    await sendAccountCreatedEmail({ email, firstName: name.split(/\s+/)[0], passwordUrl });
     console.log(`[autoAccount] conta criada para o pedido ${orderRef}`);
+    return { email, firstName: name.split(/\s+/)[0], passwordUrl };
   } catch (err) {
     console.error(`[autoAccount] ${orderRef} (inesperado):`, err);
+    return null;
   }
 }

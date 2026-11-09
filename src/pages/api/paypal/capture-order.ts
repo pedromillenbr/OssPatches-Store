@@ -116,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // pedido precisa existir para o cliente — só não entra como confirmado.
     const sessionUser = await getSessionUser(req);
     await mirrorOrderToDb(order, sessionUser?.id ?? null);
-    if (!suspicious) await markOrderPaidInDb(ossOrderId);
+    const account = suspicious ? null : await markOrderPaidInDb(ossOrderId);
 
     // Comprou: fecha o carrinho abandonado para não receber o lembrete depois.
     await markCartRecovered(order.customer.email);
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    await sendOrderConfirmationEmail(order).catch((err) =>
+    await sendOrderConfirmationEmail(order, account).catch((err) =>
       console.error('Email confirmation error:', err)
     );
 

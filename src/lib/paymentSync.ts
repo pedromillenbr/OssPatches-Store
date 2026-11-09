@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { updateOrderStatusInSheet, getOrderFromSheet } from '@/services/googleSheets';
-import { sendPaymentConfirmedEmail } from '@/services/email';
+import { sendAccountCreatedEmail, sendPaymentConfirmedEmail } from '@/services/email';
 import { settlePixUse } from '@/lib/couponUsage';
 import { markOrderPaidInDb } from '@/lib/orderPaymentSync';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -44,14 +44,18 @@ export async function applyPaymentStatus(
   await settlePixUse(orderId);
 
   // Sem esta linha o cliente logado continuaria vendo "Aguardando pagamento".
-  await markOrderPaidInDb(orderId);
+  const account = await markOrderPaidInDb(orderId);
 
   if (existingOrder?.customer?.email) {
     await sendPaymentConfirmedEmail(
-      { ...existingOrder, items: (await itemsFromDb(orderId)) ?? existingOrder.items } as Order
+      { ...existingOrder, items: (await itemsFromDb(orderId)) ?? existingOrder.items } as Order,
+      account
     ).catch((err) =>
       console.error('[paymentSync] Email error:', err)
     );
+  } else if (account) {
+    // Sem confirmação para carregar o link, a conta não pode ficar sem aviso.
+    await sendAccountCreatedEmail(account);
   }
 
   // Purchase para a Meta pela API de Conversões. O `event_id` é o número do
