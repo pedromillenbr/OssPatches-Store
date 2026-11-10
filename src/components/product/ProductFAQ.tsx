@@ -48,7 +48,7 @@ const PATCH_FAQ: FAQItem[] = [
   {
     question: 'Qual o prazo de produção dos patches?',
     answer:
-      'Após aprovação do, o prazo de produção é de até 7 dias úteis. O frete é calculado automaticamente pelo CEP e aparece no checkout.',
+      'Após a aprovação do pagamento, o prazo de produção é de até 7 dias úteis. O frete é calculado automaticamente pelo CEP e aparece no checkout.',
   },
   {
     question: 'Como os patches são feitos?',
