@@ -40,8 +40,8 @@ export default function TrocasEDevolucoesPage() {
             motivo. É o direito de arrependimento do artigo 49 do CDC.
           </Highlight>
           <p>
-            Esse direito vale também para as peças personalizadas com nome, faixa ou
-            bordado sob medida. Só pedimos que o produto volte{' '}
+            Esse direito vale também para as peças personalizadas, como a faixa com
+            nome ou o patch sublimado com a sua arte. Só pedimos que o produto volte{' '}
             <strong>sem uso e em condições de ser conferido</strong> — ou seja, não
             lavado e sem sinais de treino.
           </p>

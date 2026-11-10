@@ -50,7 +50,7 @@ export function beltWeightKg(size: unknown): number {
  * Item do carrinho no formato que o Melhor Envio espera (kg e cm).
  *
  * Patch tem peso próprio e muito menor — não faz sentido cobrar caixa de
- * faixa para um bordado de 5 cm.
+ * faixa para um patch de 5 cm.
  */
 export function parcelFor(item: CartItem) {
   const isPatch = !String(item.category).startsWith('belt');

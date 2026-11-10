@@ -51,9 +51,9 @@ const PATCH_FAQ: FAQItem[] = [
       'Após aprovação do, o prazo de produção é de até 7 dias úteis. O frete é calculado automaticamente pelo CEP e aparece no checkout.',
   },
   {
-    question: 'Os patches são bordados ou impressos?',
+    question: 'Como os patches são feitos?',
     answer:
-      'Trabalhamos exclusivamente com sublimado. Não fazemos patches impressos ou bordados — o sublimado garante durabilidade superior e qualidade premium em cada peça.',
+      'Todos os nossos patches são sublimados. A sublimação garante cores vivas, definição precisa, durabilidade superior e qualidade premium em cada peça.',
   },
   {
     question: 'Os patches seguem o padrão IBJJF?',

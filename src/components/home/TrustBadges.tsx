@@ -3,7 +3,7 @@ import Emoji from '@/components/ui/Emoji';
 const BADGES = [
   { emoji: '🏭', title: 'Produção própria', desc: 'Fabricamos localmente todo o material vendido' },
   { emoji: '🥋', title: 'Padrão IBJJF', desc: 'Faixas homologadas e aprovadas para competição' },
-  { emoji: '✍️', title: 'Personalização', desc: 'Nome bordado, graus, arte e designs customizados' },
+  { emoji: '✍️', title: 'Personalização', desc: 'Nome bordado na faixa, graus e patches sublimados com a sua arte' },
   { emoji: '🚚', title: 'Envio rápido', desc: 'Postagem em até 7 dias úteis (Brasil)' },
   { emoji: '🌍', title: 'Envio mundial', desc: 'Enviamos para qualquer lugar do globo' },
   { emoji: '💎', title: 'Qualidade premium', desc: 'Materiais de alta qualidade que não desmancham nem desfiam' },
