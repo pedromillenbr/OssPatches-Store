@@ -46,13 +46,11 @@ create index if not exists abandoned_carts_pending_idx
   on public.abandoned_carts (created_at)
   where emailed_at is null and recovered_at is null and unsubscribed = false;
 
-create index if not exists abandoned_carts_token_idx
-  on public.abandoned_carts (token);
-
 -- updated_at sempre em dia, sem depender do código lembrar de setar.
 create or replace function public.touch_abandoned_cart()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
