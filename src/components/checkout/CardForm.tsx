@@ -255,7 +255,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
       if (!method) {
         toast.error(
           isDebit
-            ? 'No débito aceitamos apenas cartões Elo. Pague com Pix ou no crédito.'
+            ? 'Este cartão não é aceito no débito. Pague com Pix ou no crédito.'
             : 'Não foi possível identificar a bandeira do cartão. Confira o número.'
         );
         return;
@@ -349,7 +349,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
         {errors.cardNumber && <p className="text-xs text-red-500 mt-1">Número de cartão inválido</p>}
         {isDebit && debitUnsupported && (
           <p className="text-xs text-red-500 mt-1">
-            No débito aceitamos apenas Elo. Volte e escolha Pix ou Cartão de Crédito.
+            Este cartão não é aceito no débito. Escolha Pix ou Cartão de Crédito.
           </p>
         )}
       </div>

@@ -56,11 +56,10 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
   },
   {
     id: 'debit_card',
-    // O Mercado Pago só libera débito Elo para esta conta (débito Visa/Master
-    // não existe no débito online deles). Dizer isso antes evita o cliente
-    // digitar o cartão inteiro para só então ser recusado.
-    label: 'Cartão de Débito Elo',
-    description: 'Somente Elo. Débito Visa ou Master? Use Pix ou crédito.',
+    // Texto padrão. Assim que a lista de bandeiras chega do Mercado Pago, a
+    // descrição diz quais débitos são aceitos (ver debitDescription).
+    label: 'Cartão de Débito',
+    description: 'Débito à vista — processado pelo Mercado Pago',
     brazilOnly: true,
     logo: '/images/payment/mercadopago-logo.svg',
   },
@@ -72,6 +71,58 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
     icon: '🅿',
   },
 ];
+
+// ─── Bandeiras de débito ──────────────────────────────────────────────────────
+//
+// Quais débitos a conta aceita muda do lado do Mercado Pago (hoje só Elo; há
+// chamado aberto para Visa e Master). Lemos a lista da própria API, então o
+// texto do checkout se atualiza sozinho no dia em que liberarem — sem deploy.
+
+const DEBIT_BRAND_NAMES: Record<string, string> = {
+  debelo: 'Elo',
+  debvisa: 'Visa',
+  debmaster: 'Master',
+  debcabal: 'Cabal',
+};
+
+let debitBrandsCache: Promise<string[]> | null = null;
+
+function fetchDebitBrands(): Promise<string[]> {
+  if (!debitBrandsCache) {
+    const key = process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+    debitBrandsCache = fetch(`https://api.mercadopago.com/v1/payment_methods?public_key=${key}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: { id: string; payment_type_id: string; status: string }[]) =>
+        (Array.isArray(list) ? list : [])
+          .filter((m) => m.payment_type_id === 'debit_card' && m.status === 'active')
+          .map((m) => DEBIT_BRAND_NAMES[m.id] ?? m.id)
+      )
+      .catch(() => {
+        debitBrandsCache = null; // tenta de novo na próxima vez
+        return [];
+      });
+  }
+  return debitBrandsCache;
+}
+
+/** null enquanto carrega (ou se falhar): fica o texto padrão. */
+function useDebitBrands(enabled: boolean): string[] | null {
+  const [brands, setBrands] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    fetchDebitBrands().then((b) => { if (alive && b.length > 0) setBrands(b); });
+    return () => { alive = false; };
+  }, [enabled]);
+  return brands;
+}
+
+function debitDescription(brands: string[]): string {
+  const missing = ['Visa', 'Master'].filter((b) => !brands.includes(b));
+  const list = brands.length > 1 ? `${brands.slice(0, -1).join(', ')} e ${brands[brands.length - 1]}` : brands[0];
+  if (missing.length === 0) return `Débito à vista: ${list}`;
+  return `Aceitamos débito ${list}. Débito ${missing.join(' ou ')}? Use Pix ou crédito.`;
+}
 
 // ─── Pix Screen ───────────────────────────────────────────────────────────────
 
@@ -329,11 +380,15 @@ export default function PaymentStep() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerEmail]);
 
+  const debitBrands = useDebitBrands(isBrazil);
+
   const availableMethods = PAYMENT_OPTIONS.filter((o) => {
     if (o.brazilOnly && !isBrazil) return false;
     if (o.internationalOnly && isBrazil) return false;
     return true;
-  });
+  }).map((o) =>
+    o.id === 'debit_card' && debitBrands ? { ...o, description: debitDescription(debitBrands) } : o
+  );
 
   useEffect(() => {
     const valid = availableMethods.some((m) => m.id === selectedMethod);
