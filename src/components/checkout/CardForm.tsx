@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import axios from 'axios';
+import { MP_PUBLIC_KEY } from '@/lib/mpPublicKey';
 
 declare global {
   interface Window {
@@ -141,7 +142,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
 
     let cancelled = false;
     setLoadingInstallments(true);
-    const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
+    const mp = new window.MercadoPago(MP_PUBLIC_KEY);
 
     mp.getInstallments({ amount: total.toFixed(2), bin, paymentTypeId: 'credit_card' })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -173,7 +174,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
     if (bin.length < 6) { setDebitUnsupported(false); return; }
 
     let cancelled = false;
-    const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
+    const mp = new window.MercadoPago(MP_PUBLIC_KEY);
     mp.getPaymentMethods({ bin })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((res: any) => {
@@ -217,7 +218,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
       return;
     }
 
-    const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
+    const mp = new window.MercadoPago(MP_PUBLIC_KEY);
     const bin = data.cardNumber.replace(/\s/g, '').substring(0, 6);
 
     try {

@@ -19,6 +19,8 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import axios from 'axios';
 import { authHeader } from '@/lib/authHeader';
+import { MP_PUBLIC_KEY, CARD_PAYMENTS_AVAILABLE } from '@/lib/mpPublicKey';
+import { reportClientError } from '@/components/ErrorBoundary';
 
 const PayPalScriptProvider = dynamic(
   () => import('@paypal/react-paypal-js').then((m) => m.PayPalScriptProvider),
@@ -89,7 +91,8 @@ let debitBrandsCache: Promise<string[]> | null = null;
 
 function fetchDebitBrands(): Promise<string[]> {
   if (!debitBrandsCache) {
-    const key = process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+    const key = MP_PUBLIC_KEY;
+    if (!key) return Promise.resolve([]);
     debitBrandsCache = fetch(`https://api.mercadopago.com/v1/payment_methods?public_key=${key}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((list: { id: string; payment_type_id: string; status: string }[]) =>
@@ -385,10 +388,20 @@ export default function PaymentStep() {
   const availableMethods = PAYMENT_OPTIONS.filter((o) => {
     if (o.brazilOnly && !isBrazil) return false;
     if (o.internationalOnly && isBrazil) return false;
+    // Sem a chave pública o cartão não funciona: some da lista e o cliente
+    // paga por Pix, em vez de ver a tela quebrar.
+    if ((o.id === 'credit_card' || o.id === 'debit_card') && !CARD_PAYMENTS_AVAILABLE) return false;
     return true;
   }).map((o) =>
     o.id === 'debit_card' && debitBrands ? { ...o, description: debitDescription(debitBrands) } : o
   );
+
+  // Avisa nos logs ([client-error]) que o cartão está fora do ar por falta da chave.
+  useEffect(() => {
+    if (isBrazil && !CARD_PAYMENTS_AVAILABLE) {
+      reportClientError(new Error('NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ausente no build — cartão escondido do checkout'));
+    }
+  }, [isBrazil]);
 
   useEffect(() => {
     const valid = availableMethods.some((m) => m.id === selectedMethod);
