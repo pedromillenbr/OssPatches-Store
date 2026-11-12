@@ -46,6 +46,7 @@ export async function saveAbandonedCart(input: {
   items: CartItem[];
   subtotal: number;
   currency: string;
+  visitorId?: string;
 }): Promise<void> {
   const admin = getSupabaseAdmin();
   if (!admin) return;
@@ -59,8 +60,7 @@ export async function saveAbandonedCart(input: {
       .eq('email', email)
       .maybeSingle();
 
-    const { error } = await admin.from('abandoned_carts').upsert(
-      {
+    const row = {
         email,
         name: input.name?.trim() || null,
         items: input.items,
@@ -71,9 +71,17 @@ export async function saveAbandonedCart(input: {
         recovered_at: null,
         // Quem pediu para não receber continua sem receber, mesmo voltando.
         unsubscribed: existing?.unsubscribed ?? false,
-      },
-      { onConflict: 'email' }
-    );
+    };
+
+    let { error } = await admin
+      .from('abandoned_carts')
+      .upsert({ ...row, visitor_id: input.visitorId ?? null }, { onConflict: 'email' });
+
+    // Banco ainda sem a coluna visitor_id (supabase/checkout_events.sql não
+    // rodado): salva sem ela — o lembrete importa mais que o "parou em".
+    if (error && /visitor_id/.test(error.message)) {
+      ({ error } = await admin.from('abandoned_carts').upsert(row, { onConflict: 'email' }));
+    }
 
     if (error) console.error('[abandonedCart] save:', error.message);
   } catch (err) {

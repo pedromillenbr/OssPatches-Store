@@ -1,5 +1,6 @@
 import { useCartStore } from '@/store/cartStore';
 import type { CustomerIdentification } from '@/types';
+import { getVisitorId } from '@/lib/funnel';
 
 /**
  * Manda o carrinho atual para o servidor guardar, junto do e-mail informado no
@@ -22,6 +23,8 @@ export function saveCartForRecovery(customer: CustomerIdentification): void {
         name: customer.name,
         items,
         currency: customer.countryCode === 'BR' ? 'BRL' : 'USD',
+        // Liga o carrinho às etapas do funil (painel: "parou em").
+        visitorId: getVisitorId(),
       }),
       // A pessoa pode fechar a aba logo em seguida; keepalive faz a requisição
       // sobreviver a isso.

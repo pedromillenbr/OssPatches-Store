@@ -1,4 +1,5 @@
 import { metaTrack, metaPageView, META_PIXEL_ID } from '@/lib/metaPixel';
+import { trackFunnel } from '@/lib/funnel';
 
 export const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
 export { META_PIXEL_ID };
@@ -33,6 +34,7 @@ export function trackViewProduct(product: {
   category: string;
   price: number;
 }) {
+  trackFunnel('produto');
   if (GA_ID) {
     gtag('event', 'view_item', {
       currency: 'BRL',
@@ -58,6 +60,7 @@ export function trackAddToCart(item: {
   price: number;
   quantity: number;
 }) {
+  trackFunnel('carrinho');
   if (GA_ID) {
     gtag('event', 'add_to_cart', {
       currency: 'BRL',
@@ -94,6 +97,7 @@ export function trackSelectShipping(shippingName: string, price: number) {
 }
 
 export function trackSelectPayment(method: string) {
+  trackFunnel('pagamento');
   if (GA_ID) gtag('event', 'add_payment_info', { payment_type: method });
 
   metaTrack('AddPaymentInfo', { payment_type: method });

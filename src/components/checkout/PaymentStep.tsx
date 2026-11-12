@@ -227,6 +227,7 @@ function PayPalSection({ items, shippingCost, couponCode, discountPercent, total
         <PayPalButtons
           style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }}
           createOrder={async () => {
+            trackSelectPayment('paypal');
             const { data } = await axios.post('/api/paypal/create-order', {
               items,
               shippingCost,

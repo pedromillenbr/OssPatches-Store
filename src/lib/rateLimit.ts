@@ -96,6 +96,9 @@ const LIMITS: Record<string, LimiterConfig> = {
   // Erros do navegador mandados para os logs. Um cliente com problema manda
   // poucos; o teto só impede alguém de entupir os logs.
   'client-error': { requests: 10, window: '10 m' },
+  // Etapas do funil. Uma compra inteira manda ~7; o teto cobre quem compara
+  // vários produtos sem deixar ninguém inflar os números do painel.
+  'funnel': { requests: 40, window: '10 m' },
 };
 
 // ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import SuccessStep from '@/components/checkout/SuccessStep';
 import { useCheckoutStore } from '@/store/checkoutStore';
 import { useCartStore } from '@/store/cartStore';
 import Link from 'next/link';
+import { trackFunnel, type FunnelStep } from '@/lib/funnel';
 
 const STEP_TITLES: Record<string, string> = {
   identification: 'Seus dados',
@@ -24,6 +25,20 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { step } = useCheckoutStore();
   const { items } = useCartStore();
+
+  // Funil: cada etapa que aparece na tela quer dizer que a anterior foi
+  // concluída (o endereço aparece = os dados foram preenchidos, e assim por diante).
+  useEffect(() => {
+    if (items.length === 0) return;
+    const reached: Partial<Record<string, FunnelStep>> = {
+      identification: 'checkout',
+      address: 'dados',
+      shipping: 'endereco',
+      payment: 'frete',
+    };
+    const funnelStep = reached[step];
+    if (funnelStep) trackFunnel(funnelStep);
+  }, [step, items.length]);
 
   // Redirect to cart if empty (client-side only)
   useEffect(() => {

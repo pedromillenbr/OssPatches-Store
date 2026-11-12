@@ -83,7 +83,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const currency = req.body?.currency === 'USD' ? 'USD' : 'BRL';
   const name = typeof req.body?.name === 'string' ? req.body.name.slice(0, 120) : undefined;
 
-  await saveAbandonedCart({ email, name, items, subtotal, currency });
+  const rawVisitor = String(req.body?.visitorId ?? '');
+  const visitorId = /^[a-z0-9]{20,40}$/.test(rawVisitor) ? rawVisitor : undefined;
+
+  await saveAbandonedCart({ email, name, items, subtotal, currency, visitorId });
 
   return res.status(204).end();
 }

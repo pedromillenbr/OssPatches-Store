@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 
 const TABS = [
   { href: '/admin', label: 'Pedidos' },
+  { href: '/admin/funil', label: 'Funil' },
   { href: '/admin/avaliacoes', label: 'Avaliações' },
   { href: '/admin/cupons', label: 'Cupons' },
 ];
@@ -20,7 +21,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
         <h1 className="text-xl font-extrabold tracking-tight text-brand-black">{title}</h1>
       </div>
 
-      <nav className="mt-6 flex gap-2">
+      <nav className="mt-6 flex flex-wrap gap-2">
         {TABS.map((tab) => {
           const active = router.pathname === tab.href;
           return (
