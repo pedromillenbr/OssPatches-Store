@@ -93,6 +93,9 @@ const LIMITS: Record<string, LimiterConfig> = {
   // Link de envio da arte do patch. Rota pública; o teto cobre um kit com
   // algumas trocas de arquivo sem deixar ninguém lotar o Banco de Dados.
   'artwork-upload': { requests: 15, window: '10 m' },
+  // Erros do navegador mandados para os logs. Um cliente com problema manda
+  // poucos; o teto só impede alguém de entupir os logs.
+  'client-error': { requests: 10, window: '10 m' },
 };
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import { CONFIG } from '@/config';
 import { GA_ID, pageview } from '@/lib/analytics';
 import { META_PIXEL_ID } from '@/lib/metaPixel';
 import { AuthProvider } from '@/context/AuthContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -28,6 +29,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router.events]);
 
   return (
+    <ErrorBoundary>
     <AuthProvider>
     <main className={inter.className}>
       <Head>
@@ -121,5 +123,6 @@ export default function App({ Component, pageProps }: AppProps) {
       <Component {...pageProps} />
     </main>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

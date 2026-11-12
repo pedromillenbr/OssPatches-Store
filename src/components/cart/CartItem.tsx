@@ -10,7 +10,8 @@ interface CartItemProps {
 
 const CartItem = memo(function CartItem({ item }: CartItemProps) {
   const { removeItem, updateQuantity } = useCartStore();
-  const customization = item.customization as unknown as Record<string, unknown>;
+  // `?? {}`: um item salvo no aparelho sem personalização derrubava a página.
+  const customization = (item.customization ?? {}) as unknown as Record<string, unknown>;
 
   const lines: string[] = [];
   if ('items' in customization && Array.isArray(customization.items)) {
