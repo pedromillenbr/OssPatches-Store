@@ -56,8 +56,11 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
   },
   {
     id: 'debit_card',
-    label: 'Cartão de Débito',
-    description: 'Débito à vista — processado pelo Mercado Pago',
+    // O Mercado Pago só libera débito Elo para esta conta (débito Visa/Master
+    // não existe no débito online deles). Dizer isso antes evita o cliente
+    // digitar o cartão inteiro para só então ser recusado.
+    label: 'Cartão de Débito Elo',
+    description: 'Somente Elo. Débito Visa ou Master? Use Pix ou crédito.',
     brazilOnly: true,
     logo: '/images/payment/mercadopago-logo.svg',
   },

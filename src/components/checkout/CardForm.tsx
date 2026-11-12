@@ -114,6 +114,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
   const [flipped, setFlipped] = useState(false);
   const [installmentOptions, setInstallmentOptions] = useState<InstallmentOption[]>([]);
   const [loadingInstallments, setLoadingInstallments] = useState(false);
+  const [debitUnsupported, setDebitUnsupported] = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CardFormFields>({
     defaultValues: { installments: 1 },
@@ -162,6 +163,30 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
 
     return () => { cancelled = true; };
   }, [cardNumberDisplay, mpReady, isDebit, total]);
+
+  // Débito: avisa assim que o cartão é reconhecido, antes do cliente preencher
+  // o resto. Quem decide é o Mercado Pago pelo BIN — o detectBrand local
+  // confunde cartões Elo que começam com 4 ou 5 com Visa/Master.
+  useEffect(() => {
+    if (!isDebit || !mpReady || !window.MercadoPago) return;
+    const bin = cardNumberDisplay.replace(/\s/g, '').substring(0, 6);
+    if (bin.length < 6) { setDebitUnsupported(false); return; }
+
+    let cancelled = false;
+    const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY);
+    mp.getPaymentMethods({ bin })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        if (cancelled) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const methods: any[] = res?.results ?? [];
+        // Só avisa quando o Mercado Pago reconheceu o cartão e não há débito.
+        setDebitUnsupported(methods.length > 0 && !methods.some((m) => m.payment_type_id === 'debit_card'));
+      })
+      .catch(() => { if (!cancelled) setDebitUnsupported(false); });
+
+    return () => { cancelled = true; };
+  }, [cardNumberDisplay, mpReady, isDebit]);
 
   const handleCardNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCardNumber(e.target.value);
@@ -230,7 +255,7 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
       if (!method) {
         toast.error(
           isDebit
-            ? 'Este cartão não é aceito no débito. Tente no crédito ou pague com Pix.'
+            ? 'No débito aceitamos apenas cartões Elo. Pague com Pix ou no crédito.'
             : 'Não foi possível identificar a bandeira do cartão. Confira o número.'
         );
         return;
@@ -322,6 +347,11 @@ export default function CardForm({ total, isDebit = false, cpf, onSubmit, loadin
         />
         <input type="hidden" {...register('cardNumber', { required: true, minLength: 15 })} />
         {errors.cardNumber && <p className="text-xs text-red-500 mt-1">Número de cartão inválido</p>}
+        {isDebit && debitUnsupported && (
+          <p className="text-xs text-red-500 mt-1">
+            No débito aceitamos apenas Elo. Volte e escolha Pix ou Cartão de Crédito.
+          </p>
+        )}
       </div>
 
       <Input
