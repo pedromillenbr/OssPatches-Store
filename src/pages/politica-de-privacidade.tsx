@@ -114,19 +114,8 @@ export default function PoliticaDePrivacidadePage() {
               <strong>Correios / Melhor Envio</strong> — cálculo de frete e entrega.
             </li>
             <li>
-              <strong>Banco de Dados</strong> — provedor de infraestrutura onde ficam
-              sua conta, pedidos e interesses, com acesso restrito e criptografia.
-            </li>
-            <li>
-              <strong>Google</strong> (Sheets e Analytics) — gestão de pedidos e
-              análise de acessos.
-            </li>
-            <li>
-              <strong>Meta</strong> (Facebook e Instagram) — medição e otimização
-              dos nossos anúncios. Enviamos os eventos de navegação e de compra. Os
-              dados de contato usados para identificar você (e-mail, telefone, nome
-              e cidade) saem daqui sempre <strong>criptografados</strong>, nunca em
-              texto legível. Seu <strong>CPF nunca é enviado</strong>.
+              Ferramentas de hospedagem, gestão de pedidos, análise de acessos e
+              anúncios.
             </li>
           </ul>
           <p>
