@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import LegalPage, { Section } from '@/components/legal/LegalPage';
 import { COMPANY, companyAddressLine } from '@/config/company';
+import { restrictedTeamsText } from '@/config/restrictedTeams';
 
 const UPDATED_AT = '26 de setembro de 2026';
 
@@ -96,6 +97,13 @@ export default function TermosDeUsoPage() {
             <li>
               Alterações no pedido só são possíveis enquanto a produção não começou.
               Fale com a gente o quanto antes.
+            </li>
+            <li>
+              <strong>Equipes com regra própria.</strong> Não produzimos patches da{' '}
+              {restrictedTeamsText()}. Essas equipes controlam o uso da própria marca, e
+              os patches oficiais são encomendados somente pela matriz ou pelo mestre
+              responsável. Se um pedido chegar com a arte de uma delas, ele é cancelado
+              e o valor pago é devolvido integralmente.
             </li>
           </ul>
         </Section>

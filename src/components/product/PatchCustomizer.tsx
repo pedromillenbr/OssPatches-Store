@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 import clsx from 'clsx';
+import RestrictedTeamsNotice from './RestrictedTeamsNotice';
 
 export const FORMAT_IMAGE_INDEX: Record<PatchFormat, number> = {
   circulo: 0,
@@ -700,6 +701,8 @@ export default function PatchCustomizer({ product, onFormatChange }: PatchCustom
           Vale a maior medida da peça — no hexágono, a largura de ponta a ponta.
         </p>
       </div>
+
+      <RestrictedTeamsNotice />
 
       {isKit ? (
         renderKitSection()

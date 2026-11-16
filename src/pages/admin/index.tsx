@@ -440,6 +440,7 @@ function AdminOrderRow({
   const [deleting, setDeleting] = useState(false);
 
   const novo = !order.seen_at;
+  const aguardandoPagamento = order.status === 'pending';
   const addr = order.address;
 
   // O link da planilha é montado na hora: a linha do pedido muda de lugar
@@ -524,7 +525,8 @@ function AdminOrderRow({
     <li
       className={clsx(
         'overflow-hidden rounded-lg border border-l-4 border-brand-gray-200 bg-white',
-        novo ? 'border-l-red-500' : 'border-l-emerald-500'
+        // Vermelho enquanto não abriu OU enquanto o pagamento não caiu.
+        novo || aguardandoPagamento ? 'border-l-red-500' : 'border-l-emerald-500'
       )}
     >
       {/* Cabeçalho sempre visível — clique abre e fecha */}
@@ -543,7 +545,14 @@ function AdminOrderRow({
                 Novo
               </span>
             )}
-            <span className="rounded-full bg-brand-gray-100 px-2 py-0.5 text-[11px] font-semibold text-brand-gray-700">
+            <span
+              className={clsx(
+                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                aguardandoPagamento
+                  ? 'bg-red-50 text-red-700'
+                  : 'bg-brand-gray-100 text-brand-gray-700'
+              )}
+            >
               {orderStatusLabel(order.status)}
             </span>
           </div>
