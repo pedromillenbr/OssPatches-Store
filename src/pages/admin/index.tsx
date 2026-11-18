@@ -351,7 +351,9 @@ function itemDetails(item: AdminOrderItem): string {
     str('dimensions'),
     c.type === 'custom' ? 'Personalizada' : '',
     str('embroideredName') && `Nome: ${str('embroideredName')}`,
-    str('nameColor') && `Bordado ${str('nameColor')}`,
+    str('nameFont') &&
+      `Fonte: ${str('nameFont') === 'manuscrita' ? 'Brush Script (manuscrita)' : 'Brantford New (clássica)'}`,
+    str('nameColor') && `Bordado ${str('nameColor') === 'branco' ? 'branco' : 'dourado'}`,
     stripe && stripe !== 'none' ? `Ponteira ${stripe}` : '',
     str('artworkFileName') && `Arte: ${str('artworkFileName')}`,
   ]

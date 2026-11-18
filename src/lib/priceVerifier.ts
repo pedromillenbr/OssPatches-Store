@@ -98,6 +98,10 @@ function cleanCustomization(raw: unknown): ItemCustomization {
       cleanPatchFields((raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>)
     );
   }
+  // Fonte e cor do bordado da faixa personalizada. Sem isto a produção
+  // recebia o nome mas não sabia em qual fonte nem em qual cor bordar.
+  if (c.nameFont === 'serifada' || c.nameFont === 'manuscrita') out.nameFont = c.nameFont;
+  if (c.nameColor === 'dourado' || c.nameColor === 'branco') out.nameColor = c.nameColor;
   if (c.degree !== undefined) {
     const d = Number(c.degree);
     out.degree = Number.isInteger(d) && d >= 0 && d <= 10 ? d : 0;
