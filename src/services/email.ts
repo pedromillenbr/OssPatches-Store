@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { Order, CartItem } from '@/types';
 import { CONFIG } from '@/config';
+import { COMPANY } from '@/config/company';
 import type { NewAccount } from '@/lib/autoAccount';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -140,17 +141,24 @@ function baseLayout(content: string): string {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;max-width:600px;width:100%">
         <!-- Header -->
         <tr>
-          <td style="background:#000;padding:24px 40px">
-            <p style="margin:0;color:#fff;font-size:22px;font-weight:900;letter-spacing:2px">OSSPATCHES</p>
-            <p style="margin:4px 0 0;color:#aaa;font-size:12px;letter-spacing:1px">FAIXAS & PATCHES PREMIUM</p>
+          <td align="center" style="background:#000;padding:30px 40px 26px">
+            <a href="${CONFIG.siteUrl}" style="color:#fff;text-decoration:none;font-size:26px;font-weight:900;letter-spacing:4px">OSSPATCHES</a>
+            <p style="margin:6px 0 0;color:#9a9a9a;font-size:11px;letter-spacing:2px">FAIXAS &amp; PATCHES DE JIU-JITSU</p>
           </td>
         </tr>
+        <tr><td style="background:#DC2626;height:4px;line-height:4px;font-size:0">&nbsp;</td></tr>
         <!-- Content -->
         <tr><td style="padding:40px">${content}</td></tr>
         <!-- Footer -->
         <tr>
-          <td style="background:#f9f9f9;padding:24px 40px;border-top:1px solid #eee;text-align:center">
-            <p style="margin:0;font-size:12px;color:#999">Dúvidas? Fale conosco pelo WhatsApp ou Instagram</p>
+          <td style="background:#fafafa;padding:26px 40px;border-top:1px solid #eee;text-align:center">
+            <p style="margin:0;font-size:13px;color:#555">
+              Precisa de ajuda?
+              <a href="https://wa.me/${COMPANY.whatsapp}" style="color:#000;font-weight:700;text-decoration:none">WhatsApp</a>
+              &nbsp;·&nbsp;
+              <a href="${CONFIG.social.instagram}" style="color:#000;font-weight:700;text-decoration:none">Instagram</a>
+              &nbsp;·&nbsp; ou responda este e-mail
+            </p>
             <p style="margin:8px 0 0;font-size:12px;color:#999">© ${new Date().getFullYear()} OssPatches — Todos os direitos reservados</p>
           </td>
         </tr>

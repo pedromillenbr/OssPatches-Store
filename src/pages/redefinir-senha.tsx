@@ -20,18 +20,23 @@ export default function RedefinirSenhaPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  // 'new' = conta recém-criada pela compra; 'expired' = código já usado/vencido.
-  const [welcome, setWelcome] = useState<'new' | 'expired' | null>(null);
+  // 'new' = conta recém-criada pela compra (ainda sem senha).
+  const [welcome, setWelcome] = useState<'new' | null>(null);
+
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
-    const tokenHash = new URLSearchParams(window.location.hash.slice(1)).get('token_hash');
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const tokenHash = params.get('token_hash');
     if (!tokenHash) return;
 
     // Tira o código da barra de endereço: ele só vale uma vez.
     window.history.replaceState(null, '', window.location.pathname);
-    setWelcome('new');
+    // `type=recovery` vem do e-mail de "Esqueci minha senha" (conta antiga);
+    // sem ele, é a conta criada pela compra, que ainda não tem senha.
+    if (params.get('type') !== 'recovery') setWelcome('new');
     supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' }).then(({ error }) => {
-      if (error) setWelcome('expired');
+      if (error) setExpired(true);
     });
   }, []);
 
@@ -63,7 +68,7 @@ export default function RedefinirSenhaPage() {
             : 'Escolha uma nova senha para sua conta.'
         }
       >
-        {welcome === 'expired' && (
+        {expired && (
           <p className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Este link já foi usado ou expirou.{' '}
             <Link href="/senha-perdida" className="font-semibold underline">

@@ -1,0 +1,5 @@
+recuperar-senha.html  ->  Assunto: Redefina sua senha — OssPatches
+confirmar-cadastro.html  ->  Assunto: Confirme seu e-mail — OssPatches
+link-de-acesso.html  ->  Assunto: Seu link de acesso — OssPatches
+trocar-email.html  ->  Assunto: Confirme a troca de e-mail — OssPatches
+convite.html  ->  Assunto: Você foi convidado — OssPatches
